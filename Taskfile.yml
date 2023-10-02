@@ -1,0 +1,72 @@
+# https://taskfile.dev
+version: '3'
+
+silent: true
+
+vars:
+  GO_MODULE: github.com/lapitskyss/chat-service
+  GO_FILES:
+    sh: find . -type f -name '*.go' -not -path "./vendor/*" -not -path "*.gen.go" | tr "\n" " "
+
+  GOLANGCI_LINT_VERSION: v1.52.2
+  GOLANGCI_LINT_CACHE:
+    sh: echo "$HOME/Library/Caches/GolangciLint"
+
+  DEV_TOOLS: |
+    github.com/daixiang0/gci@v0.10.1
+    mvdan.cc/gofumpt@v0.4.0
+
+tasks:
+  default:
+    cmds:
+      - task: tidy
+      - task: fmt
+      - task: lint
+      - task: tests
+      - task: build
+
+  tidy:
+    - echo "- Tidy"
+    - go mod tidy
+    - task: vendor
+
+  vendor:
+    - echo "- Vendor"
+    - go mod vendor
+
+  fmt:
+    - echo "- Format"
+    - gofumpt -l -w {{.GO_FILES}}
+    - gci write -s standard -s default -s "prefix({{.GO_MODULE}})" {{.GO_FILES}}
+
+  lint:
+    cmds:
+      - echo "- Lint"
+      - mkdir -p {{.GOLANGCI_LINT_CACHE}}
+      - task: lint:cmd
+        vars: {CLI_ARGS: "run -v --fix --timeout=5m ./..."}
+
+  lint:cmd:
+    cmds:
+      - |
+        docker run --rm \
+          -v "$(pwd):/app" -w /app \
+          -v "{{.GOLANGCI_LINT_CACHE}}:/root/.cache" \
+          golangci/golangci-lint:{{.GOLANGCI_LINT_VERSION}} \
+          golangci-lint {{.CLI_ARGS}}
+
+  tests:
+    cmds:
+      - echo "- Tests"
+      - go test -race ./...
+
+  build:
+    cmds:
+      - echo "- Build"
+      - go build ./cmd/chat-service
+
+  dev-tools:install:
+    cmds:
+      - echo "- Install dev tools"
+      - for: { var: DEV_TOOLS }
+        cmd: go install {{.ITEM}}
