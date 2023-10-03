@@ -29,6 +29,17 @@ linters-settings:
         json: camel
         toml: snake
 
+  depguard:
+    rules:
+      main:
+        files:
+          - $all
+          - "!$test"
+        allow:
+          - $gostd
+          - github.com/pelletier/go-toml/
+          - github.com/lapitskyss/chat-service
+
 linters:
   disable-all: true
   enable:

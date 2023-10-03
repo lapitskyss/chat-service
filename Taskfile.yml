@@ -15,6 +15,7 @@ vars:
   DEV_TOOLS: |
     github.com/daixiang0/gci@v0.10.1
     mvdan.cc/gofumpt@v0.4.0
+    github.com/kazhuravlev/options-gen/cmd/options-gen@v0.30.0
 
 tasks:
   default:
@@ -64,6 +65,11 @@ tasks:
     cmds:
       - echo "- Build"
       - go build ./cmd/chat-service
+      - rm chat-service
+
+  generate:
+    - echo "Run go generate..."
+    - go generate ./...
 
   dev-tools:install:
     cmds:
