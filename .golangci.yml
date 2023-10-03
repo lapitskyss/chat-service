@@ -39,6 +39,9 @@ linters-settings:
           - $gostd
           - github.com/pelletier/go-toml/
           - github.com/lapitskyss/chat-service
+          - github.com/labstack/echo/v4
+          - github.com/go-playground/validator
+          - github.com/kazhuravlev/options-gen
 
 linters:
   disable-all: true

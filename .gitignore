@@ -53,3 +53,6 @@ Thumbs.db
 
 # Resources
 res
+
+# Config
+configs/config.toml
