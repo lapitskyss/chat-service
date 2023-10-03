@@ -35,13 +35,13 @@ func run() (errReturned error) {
 		return fmt.Errorf("parse and validate config %q: %v", *configPath, err)
 	}
 
-	err = logger.Init(logger.NewOptions(cfg.Log.Level, logger.WithProductionMode(cfg.Global.Env == "prod")))
+	err = logger.Init(logger.NewOptions(cfg.Log.Level, logger.WithProductionMode(cfg.Global.IsProd())))
 	if err != nil {
 		return fmt.Errorf("init logger: %v", err)
 	}
 	defer logger.Sync()
 
-	srvDebug, err := serverdebug.New(serverdebug.NewOptions(cfg.Servers.Debug.Addr))
+	srvDebug, err := serverdebug.New(serverdebug.NewOptions(cfg.Servers.Debug.Addr, cfg.Global.Env))
 	if err != nil {
 		return fmt.Errorf("init debug server: %v", err)
 	}
