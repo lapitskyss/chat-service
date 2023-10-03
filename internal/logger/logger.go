@@ -28,16 +28,9 @@ func Init(opts Options) error {
 		return fmt.Errorf("validate options: %v", err)
 	}
 
-	var level zap.AtomicLevel
-	switch opts.level {
-	case "debug":
-		level = zap.NewAtomicLevelAt(zap.DebugLevel)
-	case "info":
-		level = zap.NewAtomicLevelAt(zap.InfoLevel)
-	case "warn":
-		level = zap.NewAtomicLevelAt(zap.WarnLevel)
-	case "error":
-		level = zap.NewAtomicLevelAt(zap.ErrorLevel)
+	level, err := zapcore.ParseLevel(opts.level)
+	if err != nil {
+		return fmt.Errorf("zapcore parse level: %v", err)
 	}
 
 	cfg := zapcore.EncoderConfig{
@@ -57,7 +50,7 @@ func Init(opts Options) error {
 		enc = zapcore.NewConsoleEncoder(cfg)
 	}
 
-	stdout := zapcore.AddSync(os.Stdout)
+	stdout := zapcore.Lock(os.Stdout)
 
 	cores := []zapcore.Core{
 		zapcore.NewCore(enc, stdout, level),
