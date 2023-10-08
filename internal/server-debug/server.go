@@ -25,13 +25,11 @@ const (
 //go:generate options-gen -out-filename=server_options.gen.go -from-struct=Options
 type Options struct {
 	addr string `option:"mandatory" validate:"required,hostname_port"`
-	env  string `option:"mandatory" validate:"required,oneof=dev stage prod"`
 }
 
 type Server struct {
 	lg  *zap.Logger
 	srv *http.Server
-	env string
 }
 
 func New(opts Options) (*Server, error) {
@@ -49,7 +47,6 @@ func New(opts Options) (*Server, error) {
 			Handler:           e,
 			ReadHeaderTimeout: readHeaderTimeout,
 		},
-		env: opts.env,
 	}
 
 	index := newIndexPage()
@@ -59,9 +56,17 @@ func New(opts Options) (*Server, error) {
 
 	e.GET("/", index.handler)
 	e.GET("/version", s.Version)
-	e.GET("/debug/pprof/", s.Pprof)
-	e.GET("/debug/pprof/profile", s.PprofProfile)
-	e.PUT("/log/level", s.ChangeLogLevel)
+	{
+		pprofMux := http.NewServeMux()
+		pprofMux.HandleFunc("/debug/pprof/", pprof.Index)
+		pprofMux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+		pprofMux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+		pprofMux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+		pprofMux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+
+		e.GET("/debug/pprof/*", echo.WrapHandler(pprofMux))
+	}
+	e.PUT("/log/level", echo.WrapHandler(logger.Level))
 
 	return s, nil
 }
@@ -96,24 +101,4 @@ func (s *Server) Run(ctx context.Context) error {
 
 func (s *Server) Version(c echo.Context) error {
 	return c.JSON(http.StatusOK, buildinfo.BuildInfo)
-}
-
-func (s *Server) Pprof(c echo.Context) error {
-	pprof.Index(c.Response().Writer, c.Request())
-	return nil
-}
-
-func (s *Server) PprofProfile(c echo.Context) error {
-	pprof.Profile(c.Response().Writer, c.Request())
-	return nil
-}
-
-func (s *Server) ChangeLogLevel(c echo.Context) error {
-	level := c.FormValue("level")
-	err := logger.Init(logger.NewOptions(level, logger.WithProductionMode(s.env == "prod")))
-	if err != nil {
-		return err
-	}
-	s.lg = serverLogger()
-	return nil
 }

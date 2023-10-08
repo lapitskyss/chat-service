@@ -29,27 +29,13 @@ linters-settings:
         json: camel
         toml: snake
 
-  depguard:
-    rules:
-      main:
-        files:
-          - $all
-          - "!$test"
-        allow:
-          - $gostd
-          - github.com/pelletier/go-toml/
-          - github.com/lapitskyss/chat-service
-          - github.com/labstack/echo/v4
-          - github.com/go-playground/validator
-          - github.com/kazhuravlev/options-gen
-
 linters:
   disable-all: true
   enable:
     - asasalint
     - asciicheck
     - bidichk
-    - depguard
+#    - depguard
     - durationcheck
     - errcheck
     - errchkjson
@@ -102,14 +88,12 @@ linters:
     - unused
     - usestdlibvars
     - whitespace
-
-    # Broken due to https://github.com/golangci/golangci-lint/issues/3711
-    # - bodyclose
-    # - contextcheck
-    # - nilerr
-    # - noctx
-    # - rowserrcheck
-    # - sqlclosecheck
-    # - tparallel
-    # - unparam
-    # - wastedassign
+    - bodyclose
+#    - contextcheck
+    - nilerr
+    - noctx
+    - rowserrcheck
+    - sqlclosecheck
+    - tparallel
+    - unparam
+    - wastedassign

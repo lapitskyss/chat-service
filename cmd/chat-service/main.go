@@ -41,7 +41,7 @@ func run() (errReturned error) {
 	}
 	defer logger.Sync()
 
-	srvDebug, err := serverdebug.New(serverdebug.NewOptions(cfg.Servers.Debug.Addr, cfg.Global.Env))
+	srvDebug, err := serverdebug.New(serverdebug.NewOptions(cfg.Servers.Debug.Addr))
 	if err != nil {
 		return fmt.Errorf("init debug server: %v", err)
 	}
