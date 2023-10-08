@@ -35,7 +35,7 @@ func run() (errReturned error) {
 		return fmt.Errorf("parse and validate config %q: %v", *configPath, err)
 	}
 
-	err = logger.Init(logger.NewOptions(cfg.Log.Level, logger.WithProductionMode(cfg.Global.IsProd())))
+	err = logger.Init(logger.NewOptions(cfg.Log.Level, cfg.Global.Env, logger.WithSentryDNS(cfg.Sentry.Dsn)))
 	if err != nil {
 		return fmt.Errorf("init logger: %v", err)
 	}

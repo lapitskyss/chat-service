@@ -53,6 +53,7 @@ func New(opts Options) (*Server, error) {
 	index.addPage("/version", "Get build information")
 	index.addPage("/debug/pprof/", "Go std profiler")
 	index.addPage("/debug/pprof/profile?seconds=30", "Take half-min profile")
+	index.addPage("/debug/error", "Debug Sentry error event")
 
 	e.GET("/", index.handler)
 	e.GET("/version", s.Version)
@@ -67,6 +68,7 @@ func New(opts Options) (*Server, error) {
 		e.GET("/debug/pprof/*", echo.WrapHandler(pprofMux))
 	}
 	e.PUT("/log/level", echo.WrapHandler(logger.Level))
+	e.GET("/debug/error", s.DebugError)
 
 	return s, nil
 }
@@ -101,4 +103,9 @@ func (s *Server) Run(ctx context.Context) error {
 
 func (s *Server) Version(c echo.Context) error {
 	return c.JSON(http.StatusOK, buildinfo.BuildInfo)
+}
+
+func (s *Server) DebugError(c echo.Context) error {
+	s.lg.Error("look for me in the Sentry")
+	return c.String(http.StatusOK, "event send")
 }

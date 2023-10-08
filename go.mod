@@ -3,6 +3,8 @@ module github.com/lapitskyss/chat-service
 go 1.20
 
 require (
+	github.com/TheZeroSlave/zapsentry v1.18.0
+	github.com/getsentry/sentry-go v0.20.0
 	github.com/go-playground/validator/v10 v10.11.2
 	github.com/kazhuravlev/options-gen v0.28.3
 	github.com/labstack/echo/v4 v4.11.1
@@ -27,8 +29,8 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.11.0 // indirect
 	golang.org/x/net v0.12.0 // indirect
-	golang.org/x/sys v0.10.0 // indirect
-	golang.org/x/text v0.11.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
