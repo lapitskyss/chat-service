@@ -1,3 +1,7 @@
+# entgo.io/ent v0.12.4
+## explicit; go 1.20
+entgo.io/ent/schema
+entgo.io/ent/schema/field
 # github.com/TheZeroSlave/zapsentry v1.18.0
 ## explicit; go 1.17
 github.com/TheZeroSlave/zapsentry
@@ -24,6 +28,12 @@ github.com/go-playground/validator/v10
 # github.com/golang-jwt/jwt v3.2.2+incompatible
 ## explicit
 github.com/golang-jwt/jwt
+# github.com/golang/mock v1.6.0
+## explicit; go 1.11
+github.com/golang/mock/gomock
+# github.com/google/uuid v1.3.0
+## explicit
+github.com/google/uuid
 # github.com/kazhuravlev/options-gen v0.28.3
 ## explicit; go 1.18
 github.com/kazhuravlev/options-gen/pkg/errors

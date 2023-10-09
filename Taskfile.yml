@@ -76,6 +76,7 @@ tasks:
   generate:
     - echo "Run go generate..."
     - go generate ./...
+    - task: gen:types
 
   dev-tools:install:
     cmds:
@@ -113,3 +114,8 @@ tasks:
     cmds:
       - "{{.DOCKER_COMPOSE_CMD}} rm -fsv {{.SERVICE}}"
       - "{{.DOCKER_COMPOSE_CMD}} up -d {{.SERVICE}}"
+
+  gen:types:
+    cmds:
+      - echo "Generate types..."
+      - go run ./cmd/gen-types types ChatID,MessageID ./internal/types/types.gen.go
