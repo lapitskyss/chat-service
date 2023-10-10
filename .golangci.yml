@@ -1,7 +1,8 @@
 run:
   tests: true
   build-tags: [ ] # Ждёт своего часа.
-  skip-dirs: [ ] # Ждёт своего часа.
+  skip-dirs:
+    - internal/store/*
 
 issues:
   max-same-issues: 0

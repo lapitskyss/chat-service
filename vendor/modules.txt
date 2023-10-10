@@ -1,10 +1,40 @@
+# ariga.io/atlas v0.14.1-0.20230918065911-83ad451a4935
+## explicit; go 1.20
+ariga.io/atlas/schemahcl
+ariga.io/atlas/sql/internal/specutil
+ariga.io/atlas/sql/internal/sqlx
+ariga.io/atlas/sql/migrate
+ariga.io/atlas/sql/mysql
+ariga.io/atlas/sql/mysql/internal/mysqlversion
+ariga.io/atlas/sql/postgres
+ariga.io/atlas/sql/postgres/internal/postgresop
+ariga.io/atlas/sql/schema
+ariga.io/atlas/sql/sqlclient
+ariga.io/atlas/sql/sqlite
+ariga.io/atlas/sql/sqlspec
+ariga.io/atlas/sql/sqltool
 # entgo.io/ent v0.12.4
 ## explicit; go 1.20
+entgo.io/ent
+entgo.io/ent/dialect
+entgo.io/ent/dialect/entsql
+entgo.io/ent/dialect/sql
+entgo.io/ent/dialect/sql/schema
+entgo.io/ent/dialect/sql/sqlgraph
+entgo.io/ent/entql
 entgo.io/ent/schema
+entgo.io/ent/schema/edge
 entgo.io/ent/schema/field
+entgo.io/ent/schema/index
 # github.com/TheZeroSlave/zapsentry v1.18.0
 ## explicit; go 1.17
 github.com/TheZeroSlave/zapsentry
+# github.com/agext/levenshtein v1.2.1
+## explicit
+github.com/agext/levenshtein
+# github.com/apparentlymart/go-textseg/v13 v13.0.0
+## explicit; go 1.16
+github.com/apparentlymart/go-textseg/v13/textseg
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
@@ -15,6 +45,9 @@ github.com/getsentry/sentry-go/internal/debug
 github.com/getsentry/sentry-go/internal/otel/baggage
 github.com/getsentry/sentry-go/internal/otel/baggage/internal/baggage
 github.com/getsentry/sentry-go/internal/ratelimit
+# github.com/go-openapi/inflect v0.19.0
+## explicit
+github.com/go-openapi/inflect
 # github.com/go-playground/locales v0.14.1
 ## explicit; go 1.17
 github.com/go-playground/locales
@@ -31,9 +64,26 @@ github.com/golang-jwt/jwt
 # github.com/golang/mock v1.6.0
 ## explicit; go 1.11
 github.com/golang/mock/gomock
+# github.com/google/go-cmp v0.5.9
+## explicit; go 1.13
+github.com/google/go-cmp/cmp
+github.com/google/go-cmp/cmp/internal/diff
+github.com/google/go-cmp/cmp/internal/flags
+github.com/google/go-cmp/cmp/internal/function
+github.com/google/go-cmp/cmp/internal/value
 # github.com/google/uuid v1.3.0
 ## explicit
 github.com/google/uuid
+# github.com/hashicorp/hcl/v2 v2.13.0
+## explicit; go 1.18
+github.com/hashicorp/hcl/v2
+github.com/hashicorp/hcl/v2/ext/customdecode
+github.com/hashicorp/hcl/v2/ext/tryfunc
+github.com/hashicorp/hcl/v2/gohcl
+github.com/hashicorp/hcl/v2/hclparse
+github.com/hashicorp/hcl/v2/hclsyntax
+github.com/hashicorp/hcl/v2/hclwrite
+github.com/hashicorp/hcl/v2/json
 # github.com/kazhuravlev/options-gen v0.28.3
 ## explicit; go 1.18
 github.com/kazhuravlev/options-gen/pkg/errors
@@ -57,6 +107,12 @@ github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.19
 ## explicit; go 1.15
 github.com/mattn/go-isatty
+# github.com/mattn/go-sqlite3 v1.14.16
+## explicit; go 1.16
+github.com/mattn/go-sqlite3
+# github.com/mitchellh/go-wordwrap v0.0.0-20150314170334-ad45545899c7
+## explicit
+github.com/mitchellh/go-wordwrap
 # github.com/pelletier/go-toml/v2 v2.1.0
 ## explicit; go 1.16
 github.com/pelletier/go-toml/v2
@@ -77,6 +133,15 @@ github.com/valyala/bytebufferpool
 # github.com/valyala/fasttemplate v1.2.2
 ## explicit; go 1.12
 github.com/valyala/fasttemplate
+# github.com/zclconf/go-cty v1.8.0
+## explicit; go 1.12
+github.com/zclconf/go-cty/cty
+github.com/zclconf/go-cty/cty/convert
+github.com/zclconf/go-cty/cty/function
+github.com/zclconf/go-cty/cty/function/stdlib
+github.com/zclconf/go-cty/cty/gocty
+github.com/zclconf/go-cty/cty/json
+github.com/zclconf/go-cty/cty/set
 # go.uber.org/multierr v1.11.0
 ## explicit; go 1.19
 go.uber.org/multierr
@@ -96,6 +161,9 @@ go.uber.org/zap/zapcore
 golang.org/x/crypto/acme
 golang.org/x/crypto/acme/autocert
 golang.org/x/crypto/sha3
+# golang.org/x/mod v0.10.0
+## explicit; go 1.17
+golang.org/x/mod/semver
 # golang.org/x/net v0.12.0
 ## explicit; go 1.17
 golang.org/x/net/http/httpguts

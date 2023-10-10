@@ -9,7 +9,7 @@ import (
 )
 
 type Types interface {
-	ChatID | MessageID
+	ChatID | ProblemID | MessageID | UserID
 }
 
 func Parse[T Types](s string) (T, error) {
@@ -68,6 +68,53 @@ func (r ChatID) IsZero() bool {
 	return r == ChatIDNil
 }
 
+type ProblemID uuid.UUID
+
+var ProblemIDNil = ProblemID(uuid.Nil)
+
+func NewProblemID() ProblemID {
+	return ProblemID(uuid.New())
+}
+
+func (r ProblemID) String() string {
+	return uuid.UUID(r).String()
+}
+
+func (r ProblemID) Value() (driver.Value, error) {
+	return r.String(), nil
+}
+
+func (r *ProblemID) Scan(src any) error {
+	return (*uuid.UUID)(r).Scan(src)
+}
+
+func (r ProblemID) MarshalText() ([]byte, error) {
+	return uuid.UUID(r).MarshalText()
+}
+
+func (r *ProblemID) UnmarshalText(data []byte) error {
+	return (*uuid.UUID)(r).UnmarshalText(data)
+}
+
+func (r ProblemID) Validate() error {
+	if r.IsZero() {
+		return errors.New("zero ProblemID")
+	}
+	return nil
+}
+
+func (r ProblemID) Matches(x any) bool {
+	v, ok := x.(ProblemID)
+	if !ok {
+		return false
+	}
+	return r == v
+}
+
+func (r ProblemID) IsZero() bool {
+	return r == ProblemIDNil
+}
+
 type MessageID uuid.UUID
 
 var MessageIDNil = MessageID(uuid.Nil)
@@ -113,4 +160,51 @@ func (r MessageID) Matches(x any) bool {
 
 func (r MessageID) IsZero() bool {
 	return r == MessageIDNil
+}
+
+type UserID uuid.UUID
+
+var UserIDNil = UserID(uuid.Nil)
+
+func NewUserID() UserID {
+	return UserID(uuid.New())
+}
+
+func (r UserID) String() string {
+	return uuid.UUID(r).String()
+}
+
+func (r UserID) Value() (driver.Value, error) {
+	return r.String(), nil
+}
+
+func (r *UserID) Scan(src any) error {
+	return (*uuid.UUID)(r).Scan(src)
+}
+
+func (r UserID) MarshalText() ([]byte, error) {
+	return uuid.UUID(r).MarshalText()
+}
+
+func (r *UserID) UnmarshalText(data []byte) error {
+	return (*uuid.UUID)(r).UnmarshalText(data)
+}
+
+func (r UserID) Validate() error {
+	if r.IsZero() {
+		return errors.New("zero UserID")
+	}
+	return nil
+}
+
+func (r UserID) Matches(x any) bool {
+	v, ok := x.(UserID)
+	if !ok {
+		return false
+	}
+	return r == v
+}
+
+func (r UserID) IsZero() bool {
+	return r == UserIDNil
 }
