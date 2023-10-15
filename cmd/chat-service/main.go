@@ -13,6 +13,7 @@ import (
 
 	"github.com/lapitskyss/chat-service/internal/config"
 	"github.com/lapitskyss/chat-service/internal/logger"
+	clientv1 "github.com/lapitskyss/chat-service/internal/server-client/v1"
 	serverdebug "github.com/lapitskyss/chat-service/internal/server-debug"
 )
 
@@ -50,14 +51,24 @@ func run() (errReturned error) {
 		return fmt.Errorf("init debug server: %v", err)
 	}
 
+	v1Swagger, err := clientv1.GetSwagger()
+	if err != nil {
+		return fmt.Errorf("init client swagger: %v", err)
+	}
+	svrClient, err := initServerClient(
+		cfg.Servers.Client.Addr,
+		cfg.Servers.Client.AllowOrigins,
+		v1Swagger,
+	)
+	if err != nil {
+		return fmt.Errorf("init client server: %v", err)
+	}
+
 	eg, ctx := errgroup.WithContext(ctx)
 
 	// Run servers.
 	eg.Go(func() error { return srvDebug.Run(ctx) })
-
-	// Run services.
-	// Ждут своего часа.
-	// ...
+	eg.Go(func() error { return svrClient.Run(ctx) })
 
 	if err = eg.Wait(); err != nil && !errors.Is(err, context.Canceled) {
 		return fmt.Errorf("wait app stop: %v", err)

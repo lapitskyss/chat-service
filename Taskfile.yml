@@ -17,12 +17,25 @@ vars:
     mvdan.cc/gofumpt@v0.4.0
     github.com/kazhuravlev/options-gen/cmd/options-gen@v0.30.0
     entgo.io/ent/cmd/ent@v0.12.4
-    
+    github.com/deepmap/oapi-codegen/cmd/oapi-codegen@v1.15.0
+
+  TYPES: |
+    ChatID
+    ProblemID
+    MessageID
+    UserID
+    RequestID
+
   DOCKER_COMPOSE_PATHS: |
     ./deploy/local/docker-compose.yml
     ./deploy/local/docker-compose.sentry.yml
+    ./deploy/local/docker-compose.swagger-ui.yml
 
   DOCKER_COMPOSE_CMD: docker compose {{range .DOCKER_COMPOSE_PATHS | splitArgs }} -f {{.}} {{end}}
+
+  CLIENT_V1_SRC: ./api/client.v1.swagger.yml
+  CLIENT_V1_DST: ./internal/server-client/v1/server.gen.go
+  CLIENT_V1_PKG: clientv1
 
 tasks:
   default:
@@ -132,7 +145,7 @@ tasks:
   gen:types:
     cmds:
       - echo "Generate types..."
-      - go run ./cmd/gen-types types ChatID,ProblemID,MessageID,UserID ./internal/types/types.gen.go
+      - go run ./cmd/gen-types types {{.TYPES | splitArgs | join ","}} ./internal/types/types.gen.go
 
   ent:new:
     cmds:
@@ -150,3 +163,7 @@ tasks:
       - "{{.DOCKER_COMPOSE_CMD}} exec keycloak /opt/keycloak/bin/kc.sh export --file /tmp/realm.json --realm Bank"
       - echo "Exported in ./deploy/local/bank-realm.json"
       - "{{.DOCKER_COMPOSE_CMD}} cp keycloak:/tmp/realm.json ./deploy/local/bank-realm.json"
+
+  gen:api:
+    cmds:
+      - oapi-codegen -package {{.CLIENT_V1_PKG}} -generate types,server,spec {{.CLIENT_V1_SRC}} > {{.CLIENT_V1_DST}}

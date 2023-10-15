@@ -68,6 +68,6 @@ func (r {{$type}}) Matches(x any) bool {
 }
 
 func (r {{$type}}) IsZero() bool {
-	return r == {{$type}}Nil 
+	return r == {{$type}}Nil
 }
 {{end}}

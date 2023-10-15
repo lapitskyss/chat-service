@@ -9,7 +9,7 @@ import (
 )
 
 type Types interface {
-	ChatID | ProblemID | MessageID | UserID
+	ChatID | ProblemID | MessageID | UserID | RequestID
 }
 
 func Parse[T Types](s string) (T, error) {
@@ -207,4 +207,51 @@ func (r UserID) Matches(x any) bool {
 
 func (r UserID) IsZero() bool {
 	return r == UserIDNil
+}
+
+type RequestID uuid.UUID
+
+var RequestIDNil = RequestID(uuid.Nil)
+
+func NewRequestID() RequestID {
+	return RequestID(uuid.New())
+}
+
+func (r RequestID) String() string {
+	return uuid.UUID(r).String()
+}
+
+func (r RequestID) Value() (driver.Value, error) {
+	return r.String(), nil
+}
+
+func (r *RequestID) Scan(src any) error {
+	return (*uuid.UUID)(r).Scan(src)
+}
+
+func (r RequestID) MarshalText() ([]byte, error) {
+	return uuid.UUID(r).MarshalText()
+}
+
+func (r *RequestID) UnmarshalText(data []byte) error {
+	return (*uuid.UUID)(r).UnmarshalText(data)
+}
+
+func (r RequestID) Validate() error {
+	if r.IsZero() {
+		return errors.New("zero RequestID")
+	}
+	return nil
+}
+
+func (r RequestID) Matches(x any) bool {
+	v, ok := x.(RequestID)
+	if !ok {
+		return false
+	}
+	return r == v
+}
+
+func (r RequestID) IsZero() bool {
+	return r == RequestIDNil
 }
