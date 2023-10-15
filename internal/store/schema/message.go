@@ -23,9 +23,12 @@ func (Message) Fields() []ent.Field {
 			Immutable(),
 		//field.UUID("chat_id", types.ChatID{}),
 		//field.UUID("problem_id", types.ProblemID{}),
-		field.UUID("author_id", types.UserID{}),
-		field.Bool("is_visible_for_client"),
-		field.Bool("is_visible_for_manager"),
+		field.UUID("author_id", types.UserID{}).
+			Optional(),
+		field.Bool("is_visible_for_client").
+			Default(false),
+		field.Bool("is_visible_for_manager").
+			Default(false),
 		field.String("body").
 			MaxLen(3000).
 			NotEmpty(),
@@ -35,7 +38,8 @@ func (Message) Fields() []ent.Field {
 		field.Bool("is_blocked").
 			Default(false),
 		field.Bool("is_service").
-			Default(false),
+			Default(false).
+			Immutable(),
 		field.Time("created_at").
 			Default(time.Now).
 			Immutable(),

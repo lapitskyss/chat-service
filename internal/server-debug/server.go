@@ -9,12 +9,12 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/lapitskyss/chat-service/internal/buildinfo"
 	"github.com/lapitskyss/chat-service/internal/logger"
+	"github.com/lapitskyss/chat-service/internal/middlewares"
 	clientv1 "github.com/lapitskyss/chat-service/internal/server-client/v1"
 )
 
@@ -38,11 +38,14 @@ func New(opts Options) (*Server, error) {
 		return nil, fmt.Errorf("validate options: %v", err)
 	}
 
+	lg := serverLogger()
+
 	e := echo.New()
-	e.Use(middleware.Recover())
+	e.Use(middlewares.Recover(lg))
+	e.Use(middlewares.Logger(lg))
 
 	s := &Server{
-		lg: serverLogger(),
+		lg: lg,
 		srv: &http.Server{
 			Addr:              opts.addr,
 			Handler:           e,

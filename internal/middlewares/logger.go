@@ -23,7 +23,7 @@ func Logger(log *zap.Logger) echo.MiddlewareFunc {
 			return c.Request().Method == http.MethodOptions
 		},
 		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
-			log.Info("request",
+			fields := []zap.Field{
 				zap.Duration("latency", v.Latency),
 				zap.String("remote_ip", v.RemoteIP),
 				zap.String("host", v.Host),
@@ -32,9 +32,14 @@ func Logger(log *zap.Logger) echo.MiddlewareFunc {
 				zap.String("request_id", v.RequestID),
 				zap.String("user_agent", v.UserAgent),
 				zap.Int("status", v.Status),
-				zap.Error(v.Error),
 				zap.String("user_id", userIDString(c)),
-			)
+				zap.Error(v.Error),
+			}
+			if v.Status >= 400 {
+				log.Error("request", fields...)
+			} else {
+				log.Info("request", fields...)
+			}
 			return nil
 		},
 	})

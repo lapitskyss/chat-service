@@ -47,12 +47,12 @@ func New(opts Options) (*Server, error) {
 	}
 
 	e := echo.New()
-	e.Use(middleware.Recover())
+	e.Use(middlewares.Recover(opts.logger))
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: opts.allowOrigins,
 		AllowMethods: []string{http.MethodPost},
 	}))
-	e.Use(middleware.BodyLimit("12K"))
+	e.Use(middleware.BodyLimit("12K")) // 3000 (Максимальная длина сообщения) * 4 байт
 	e.Use(middlewares.NewKeycloakTokenAuth(opts.keycloakIntrospector, opts.authResource, opts.authRole))
 	e.Use(middlewares.Logger(opts.logger))
 

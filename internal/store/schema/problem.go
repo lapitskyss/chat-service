@@ -22,7 +22,8 @@ func (Problem) Fields() []ent.Field {
 			Default(types.NewProblemID).
 			Immutable(),
 		//field.UUID("chat_id", types.ChatID{}),
-		field.UUID("manager_id", types.UserID{}),
+		field.UUID("manager_id", types.UserID{}).
+			Optional(),
 		field.Time("resolved_at").
 			Optional().
 			Nillable(),
