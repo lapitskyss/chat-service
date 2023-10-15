@@ -15,6 +15,7 @@ import (
 
 	"github.com/lapitskyss/chat-service/internal/buildinfo"
 	"github.com/lapitskyss/chat-service/internal/logger"
+	clientv1 "github.com/lapitskyss/chat-service/internal/server-client/v1"
 )
 
 const (
@@ -54,6 +55,7 @@ func New(opts Options) (*Server, error) {
 	index.addPage("/debug/pprof/", "Go std profiler")
 	index.addPage("/debug/pprof/profile?seconds=30", "Take half-min profile")
 	index.addPage("/debug/error", "Debug Sentry error event")
+	index.addPage("/schema/client", "Get client OpenAPI specification")
 
 	e.GET("/", index.handler)
 	e.GET("/version", s.Version)
@@ -69,6 +71,7 @@ func New(opts Options) (*Server, error) {
 	}
 	e.PUT("/log/level", echo.WrapHandler(logger.Level))
 	e.GET("/debug/error", s.DebugError)
+	e.GET("/schema/client", s.ClientSchema)
 
 	return s, nil
 }
@@ -108,4 +111,12 @@ func (s *Server) Version(c echo.Context) error {
 func (s *Server) DebugError(c echo.Context) error {
 	s.lg.Error("look for me in the Sentry")
 	return c.String(http.StatusOK, "event send")
+}
+
+func (s *Server) ClientSchema(c echo.Context) error {
+	swagger, err := clientv1.GetSwagger()
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, swagger)
 }
