@@ -68,6 +68,18 @@ tasks:
       - echo "- Tests"
       - go test -race ./...
 
+  tests:integration:
+    env:
+      TEST_LOG_LEVEL: info
+      TEST_KEYCLOAK_REALM: Bank
+      TEST_KEYCLOAK_CLIENT_ID: integration-testing
+      TEST_KEYCLOAK_CLIENT_SECRET: bAsBxAavMvxX4SeFx0g0yBarS8KPxYm7
+      TEST_KEYCLOAK_TEST_USER: integration-testing
+      TEST_KEYCLOAK_TEST_PASSWORD: integration-testing
+    cmds:
+      - echo "- Integration tests"
+      - go test -tags integration -count 1 -race ./...
+
   build:
     cmds:
       - echo "- Build"
@@ -131,3 +143,10 @@ tasks:
     cmds:
       - ent generate ./internal/store/schema
       - task: tidy
+
+  kc:export:
+    cmds:
+      - echo "Dump Keycloak Bank realm..."
+      - "{{.DOCKER_COMPOSE_CMD}} exec keycloak /opt/keycloak/bin/kc.sh export --file /tmp/realm.json --realm Bank"
+      - echo "Exported in ./deploy/local/bank-realm.json"
+      - "{{.DOCKER_COMPOSE_CMD}} cp keycloak:/tmp/realm.json ./deploy/local/bank-realm.json"

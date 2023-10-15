@@ -18,13 +18,9 @@ var Level zap.AtomicLevel
 
 //go:generate options-gen -out-filename=logger_options.gen.go -from-struct=Options
 type Options struct {
-	level     string `option:"mandatory" validate:"required,oneof=debug info warn error"`
-	env       string `option:"mandatory" validate:"required,oneof=dev stage prod"`
-	sentryDNS string `validate:"omitempty,url"`
-}
-
-func (c *Options) IsProd() bool {
-	return c.env == "prod"
+	level          string `option:"mandatory" validate:"required,oneof=debug info warn error"`
+	sentryDNS      string `validate:"omitempty,url"`
+	productionMode bool
 }
 
 func (c *Options) IsSentryEnabled() bool {
@@ -77,7 +73,7 @@ func stdoutZapcore(opts Options) (zapcore.Core, error) {
 	cfg.EncodeTime = zapcore.ISO8601TimeEncoder
 
 	var encoder zapcore.Encoder
-	if opts.IsProd() {
+	if opts.productionMode {
 		cfg.EncodeLevel = zapcore.CapitalLevelEncoder
 		encoder = zapcore.NewJSONEncoder(cfg)
 	} else {
@@ -91,7 +87,15 @@ func sentryZapcore(opts Options) (zapcore.Core, error) {
 	cfg := zapsentry.Configuration{
 		Level: zapcore.WarnLevel,
 	}
-	client, err := NewSentryClient(opts.sentryDNS, opts.env, buildinfo.DepsVersion("github.com/getsentry/sentry-go"))
+	env := "dev"
+	if opts.productionMode {
+		env = "prod"
+	}
+	client, err := NewSentryClient(
+		opts.sentryDNS,
+		env,
+		buildinfo.DepsVersion("github.com/getsentry/sentry-go"),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("new sentry client: %v", err)
 	}
