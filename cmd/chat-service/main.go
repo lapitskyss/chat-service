@@ -56,8 +56,16 @@ func run() (errReturned error) {
 		return fmt.Errorf("init client swagger: %v", err)
 	}
 	svrClient, err := initServerClient(
+		cfg.Global.IsProd(),
 		cfg.Servers.Client.Addr,
 		cfg.Servers.Client.AllowOrigins,
+		cfg.Clients.Keycloak.BasePath,
+		cfg.Clients.Keycloak.Realm,
+		cfg.Clients.Keycloak.ClientID,
+		cfg.Clients.Keycloak.ClientSecret,
+		cfg.Clients.Keycloak.DebugMode,
+		cfg.Servers.Client.RequiredAccess.Resource,
+		cfg.Servers.Client.RequiredAccess.Role,
 		v1Swagger,
 	)
 	if err != nil {

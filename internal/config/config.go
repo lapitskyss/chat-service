@@ -4,6 +4,7 @@ type Config struct {
 	Global  GlobalConfig  `toml:"global"`
 	Log     LogConfig     `toml:"log"`
 	Servers ServersConfig `toml:"servers"`
+	Clients Clients       `toml:"clients"`
 	Sentry  SentryConfig  `toml:"sentry"`
 }
 
@@ -25,12 +26,30 @@ type ServersConfig struct {
 }
 
 type ClientServerConfig struct {
-	Addr         string   `toml:"addr" validate:"required,hostname_port"`
-	AllowOrigins []string `toml:"allow_origins" validate:"min=1"`
+	Addr           string                     `toml:"addr" validate:"required,hostname_port"`
+	AllowOrigins   []string                   `toml:"allow_origins" validate:"min=1"`
+	RequiredAccess ClientServerRequiredAccess `toml:"required_access"`
+}
+
+type ClientServerRequiredAccess struct {
+	Resource string `toml:"resource"`
+	Role     string `toml:"role"`
 }
 
 type DebugServerConfig struct {
 	Addr string `toml:"addr" validate:"required,hostname_port"`
+}
+
+type Clients struct {
+	Keycloak KeycloakClient `toml:"keycloak"`
+}
+
+type KeycloakClient struct {
+	BasePath     string `toml:"base_path" validate:"required"`
+	Realm        string `toml:"realm" validate:"required"`
+	ClientID     string `toml:"client_id" validate:"required"`
+	ClientSecret string `toml:"client_secret" validate:"required,alphanum"`
+	DebugMode    bool   `toml:"debug_mode"`
 }
 
 type SentryConfig struct {

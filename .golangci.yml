@@ -10,6 +10,11 @@ issues:
   exclude-rules:
     - path: internal/clients/keycloak
       linters: [ tagliatelle ]
+    - path: internal/middlewares/keycloak_claims.go
+      linters: [ tagliatelle ]
+    - path: internal/middlewares/keycloak_token_auth_test.go
+      source: "const token"
+      linters: [ gosec ]
 
 linters-settings:
   gci:

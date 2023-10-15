@@ -15,6 +15,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/lapitskyss/chat-service/internal/middlewares"
 	clientv1 "github.com/lapitskyss/chat-service/internal/server-client/v1"
 )
 
@@ -25,11 +26,14 @@ const (
 
 //go:generate options-gen -out-filename=server_options.gen.go -from-struct=Options
 type Options struct {
-	logger       *zap.Logger              `option:"mandatory" validate:"required"`
-	addr         string                   `option:"mandatory" validate:"required,hostname_port"`
-	allowOrigins []string                 `option:"mandatory" validate:"min=1"`
-	v1Swagger    *openapi3.T              `option:"mandatory" validate:"required"`
-	v1Handlers   clientv1.ServerInterface `option:"mandatory" validate:"required"`
+	logger               *zap.Logger              `option:"mandatory" validate:"required"`
+	addr                 string                   `option:"mandatory" validate:"required,hostname_port"`
+	allowOrigins         []string                 `option:"mandatory" validate:"min=1"`
+	v1Swagger            *openapi3.T              `option:"mandatory" validate:"required"`
+	v1Handlers           clientv1.ServerInterface `option:"mandatory" validate:"required"`
+	keycloakIntrospector middlewares.Introspector `option:"mandatory" validate:"required"`
+	authResource         string                   `option:"mandatory" validate:"required"`
+	authRole             string                   `option:"mandatory" validate:"required"`
 }
 
 type Server struct {
@@ -43,10 +47,14 @@ func New(opts Options) (*Server, error) {
 	}
 
 	e := echo.New()
+	e.Use(middleware.Recover())
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: opts.allowOrigins,
 		AllowMethods: []string{http.MethodPost},
 	}))
+	e.Use(middleware.BodyLimit("12K"))
+	e.Use(middlewares.NewKeycloakTokenAuth(opts.keycloakIntrospector, opts.authResource, opts.authRole))
+	e.Use(middlewares.Logger(opts.logger))
 
 	v1 := e.Group("v1", oapimdlwr.OapiRequestValidatorWithOptions(opts.v1Swagger, &oapimdlwr.Options{
 		Options: openapi3filter.Options{

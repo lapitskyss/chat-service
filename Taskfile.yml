@@ -18,6 +18,7 @@ vars:
     github.com/kazhuravlev/options-gen/cmd/options-gen@v0.30.0
     entgo.io/ent/cmd/ent@v0.12.4
     github.com/deepmap/oapi-codegen/cmd/oapi-codegen@v1.15.0
+    go.uber.org/mock/mockgen@v0.3.0
 
   TYPES: |
     ChatID

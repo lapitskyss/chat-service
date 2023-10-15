@@ -27,7 +27,7 @@ func (Message) Fields() []ent.Field {
 		field.Bool("is_visible_for_client"),
 		field.Bool("is_visible_for_manager"),
 		field.String("body").
-			MaxLen(4000).
+			MaxLen(3000).
 			NotEmpty(),
 		field.Time("checked_at").
 			Optional().
