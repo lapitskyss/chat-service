@@ -10,7 +10,7 @@ import (
 var (
 	// ChatsColumns holds the columns for the "chats" table.
 	ChatsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID},
+		{Name: "id", Type: field.TypeUUID, Unique: true},
 		{Name: "client_id", Type: field.TypeUUID, Unique: true},
 		{Name: "created_at", Type: field.TypeTime},
 	}
@@ -22,17 +22,17 @@ var (
 	}
 	// MessagesColumns holds the columns for the "messages" table.
 	MessagesColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID},
-		{Name: "author_id", Type: field.TypeUUID},
-		{Name: "is_visible_for_client", Type: field.TypeBool},
-		{Name: "is_visible_for_manager", Type: field.TypeBool},
-		{Name: "body", Type: field.TypeString, Size: 4000},
+		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "author_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "is_visible_for_client", Type: field.TypeBool, Default: false},
+		{Name: "is_visible_for_manager", Type: field.TypeBool, Default: false},
+		{Name: "body", Type: field.TypeString, Size: 3000},
 		{Name: "checked_at", Type: field.TypeTime, Nullable: true},
 		{Name: "is_blocked", Type: field.TypeBool, Default: false},
 		{Name: "is_service", Type: field.TypeBool, Default: false},
 		{Name: "created_at", Type: field.TypeTime},
-		{Name: "chat_messages", Type: field.TypeUUID, Nullable: true},
-		{Name: "problem_messages", Type: field.TypeUUID, Nullable: true},
+		{Name: "chat_id", Type: field.TypeUUID},
+		{Name: "problem_id", Type: field.TypeUUID},
 	}
 	// MessagesTable holds the schema information for the "messages" table.
 	MessagesTable = &schema.Table{
@@ -44,23 +44,23 @@ var (
 				Symbol:     "messages_chats_messages",
 				Columns:    []*schema.Column{MessagesColumns[9]},
 				RefColumns: []*schema.Column{ChatsColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "messages_problems_messages",
 				Columns:    []*schema.Column{MessagesColumns[10]},
 				RefColumns: []*schema.Column{ProblemsColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.NoAction,
 			},
 		},
 	}
 	// ProblemsColumns holds the columns for the "problems" table.
 	ProblemsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID},
-		{Name: "manager_id", Type: field.TypeUUID},
+		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "manager_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "resolved_at", Type: field.TypeTime, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
-		{Name: "chat_problems", Type: field.TypeUUID},
+		{Name: "chat_id", Type: field.TypeUUID},
 	}
 	// ProblemsTable holds the schema information for the "problems" table.
 	ProblemsTable = &schema.Table{

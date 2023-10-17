@@ -30,31 +30,31 @@ type Chat struct {
 
 // ChatEdges holds the relations/edges for other nodes in the graph.
 type ChatEdges struct {
-	// Problems holds the value of the problems edge.
-	Problems []*Problem `json:"problems,omitempty"`
 	// Messages holds the value of the messages edge.
 	Messages []*Message `json:"messages,omitempty"`
+	// Problems holds the value of the problems edge.
+	Problems []*Problem `json:"problems,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [2]bool
 }
 
-// ProblemsOrErr returns the Problems value or an error if the edge
-// was not loaded in eager-loading.
-func (e ChatEdges) ProblemsOrErr() ([]*Problem, error) {
-	if e.loadedTypes[0] {
-		return e.Problems, nil
-	}
-	return nil, &NotLoadedError{edge: "problems"}
-}
-
 // MessagesOrErr returns the Messages value or an error if the edge
 // was not loaded in eager-loading.
 func (e ChatEdges) MessagesOrErr() ([]*Message, error) {
-	if e.loadedTypes[1] {
+	if e.loadedTypes[0] {
 		return e.Messages, nil
 	}
 	return nil, &NotLoadedError{edge: "messages"}
+}
+
+// ProblemsOrErr returns the Problems value or an error if the edge
+// was not loaded in eager-loading.
+func (e ChatEdges) ProblemsOrErr() ([]*Problem, error) {
+	if e.loadedTypes[1] {
+		return e.Problems, nil
+	}
+	return nil, &NotLoadedError{edge: "problems"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -114,14 +114,14 @@ func (c *Chat) Value(name string) (ent.Value, error) {
 	return c.selectValues.Get(name)
 }
 
-// QueryProblems queries the "problems" edge of the Chat entity.
-func (c *Chat) QueryProblems() *ProblemQuery {
-	return NewChatClient(c.config).QueryProblems(c)
-}
-
 // QueryMessages queries the "messages" edge of the Chat entity.
 func (c *Chat) QueryMessages() *MessageQuery {
 	return NewChatClient(c.config).QueryMessages(c)
+}
+
+// QueryProblems queries the "problems" edge of the Chat entity.
+func (c *Chat) QueryProblems() *ProblemQuery {
+	return NewChatClient(c.config).QueryProblems(c)
 }
 
 // Update returns a builder for updating this Chat.

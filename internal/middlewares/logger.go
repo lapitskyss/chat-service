@@ -10,37 +10,45 @@ import (
 
 func Logger(log *zap.Logger) echo.MiddlewareFunc {
 	return middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
-		LogLatency:   true,
-		LogRemoteIP:  true,
-		LogHost:      true,
-		LogMethod:    true,
-		LogRoutePath: true,
-		LogRequestID: true,
-		LogUserAgent: true,
-		LogStatus:    true,
-		LogError:     true,
 		Skipper: func(c echo.Context) bool {
 			return c.Request().Method == http.MethodOptions
 		},
 		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
-			fields := []zap.Field{
+			lg := log.With(
 				zap.Duration("latency", v.Latency),
 				zap.String("remote_ip", v.RemoteIP),
 				zap.String("host", v.Host),
 				zap.String("method", v.Method),
-				zap.String("path", v.RoutePath),
+				zap.String("path", v.URIPath),
 				zap.String("request_id", v.RequestID),
 				zap.String("user_agent", v.UserAgent),
 				zap.Int("status", v.Status),
 				zap.String("user_id", userIDString(c)),
-				zap.Error(v.Error),
+			)
+
+			if err := v.Error; err != nil {
+				lg = lg.With(zap.Error(err))
 			}
-			if v.Status >= 400 {
-				log.Error("request", fields...)
-			} else {
-				log.Info("request", fields...)
+
+			switch s := v.Status; {
+			case s >= 500:
+				lg.Error("server error")
+			case s >= 400:
+				lg.Error("client error")
+			default:
+				lg.Info("success")
 			}
+
 			return nil
 		},
+		LogLatency:   true,
+		LogRemoteIP:  true,
+		LogHost:      true,
+		LogMethod:    true,
+		LogURIPath:   true,
+		LogRequestID: true,
+		LogUserAgent: true,
+		LogStatus:    true,
+		LogError:     true,
 	})
 }

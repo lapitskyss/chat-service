@@ -51,8 +51,8 @@ func NewKeycloakTokenAuth(introspector Introspector, resource, role string) echo
 			if err = tokenClaims.Valid(); err != nil {
 				return false, err
 			}
-			if err = checkTokenResourceRole(tokenClaims, resource, role); err != nil {
-				return false, err
+			if !hasTokenResourceRole(tokenClaims, resource, role) {
+				return false, ErrNoRequiredResourceRole
 			}
 
 			// Save token to context
@@ -71,25 +71,21 @@ func parseTokenUnverified(tokenStr string) (*jwt.Token, *claims, error) {
 	return jwtToken, tokenClaims, nil
 }
 
-func checkTokenResourceRole(tokenClaims *claims, resource, role string) error {
+func hasTokenResourceRole(tokenClaims *claims, resource, role string) bool {
 	chatClient, exist := tokenClaims.ResourceAccess[resource]
 	if !exist {
-		return ErrNoRequiredResourceRole
+		return false
 	}
 	roles, exist := chatClient["roles"]
 	if !exist {
-		return ErrNoRequiredResourceRole
+		return false
 	}
-	exist = false
 	for _, r := range roles {
 		if r == role {
-			exist = true
+			return true
 		}
 	}
-	if !exist {
-		return ErrNoRequiredResourceRole
-	}
-	return nil
+	return false
 }
 
 func MustUserID(c echo.Context) types.UserID {

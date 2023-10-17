@@ -23,9 +23,23 @@ type ProblemCreate struct {
 	hooks    []Hook
 }
 
+// SetChatID sets the "chat_id" field.
+func (pc *ProblemCreate) SetChatID(ti types.ChatID) *ProblemCreate {
+	pc.mutation.SetChatID(ti)
+	return pc
+}
+
 // SetManagerID sets the "manager_id" field.
 func (pc *ProblemCreate) SetManagerID(ti types.UserID) *ProblemCreate {
 	pc.mutation.SetManagerID(ti)
+	return pc
+}
+
+// SetNillableManagerID sets the "manager_id" field if the given value is not nil.
+func (pc *ProblemCreate) SetNillableManagerID(ti *types.UserID) *ProblemCreate {
+	if ti != nil {
+		pc.SetManagerID(*ti)
+	}
 	return pc
 }
 
@@ -71,6 +85,11 @@ func (pc *ProblemCreate) SetNillableID(ti *types.ProblemID) *ProblemCreate {
 	return pc
 }
 
+// SetChat sets the "chat" edge to the Chat entity.
+func (pc *ProblemCreate) SetChat(c *Chat) *ProblemCreate {
+	return pc.SetChatID(c.ID)
+}
+
 // AddMessageIDs adds the "messages" edge to the Message entity by IDs.
 func (pc *ProblemCreate) AddMessageIDs(ids ...types.MessageID) *ProblemCreate {
 	pc.mutation.AddMessageIDs(ids...)
@@ -84,17 +103,6 @@ func (pc *ProblemCreate) AddMessages(m ...*Message) *ProblemCreate {
 		ids[i] = m[i].ID
 	}
 	return pc.AddMessageIDs(ids...)
-}
-
-// SetChatID sets the "chat" edge to the Chat entity by ID.
-func (pc *ProblemCreate) SetChatID(id types.ChatID) *ProblemCreate {
-	pc.mutation.SetChatID(id)
-	return pc
-}
-
-// SetChat sets the "chat" edge to the Chat entity.
-func (pc *ProblemCreate) SetChat(c *Chat) *ProblemCreate {
-	return pc.SetChatID(c.ID)
 }
 
 // Mutation returns the ProblemMutation object of the builder.
@@ -144,8 +152,13 @@ func (pc *ProblemCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (pc *ProblemCreate) check() error {
-	if _, ok := pc.mutation.ManagerID(); !ok {
-		return &ValidationError{Name: "manager_id", err: errors.New(`store: missing required field "Problem.manager_id"`)}
+	if _, ok := pc.mutation.ChatID(); !ok {
+		return &ValidationError{Name: "chat_id", err: errors.New(`store: missing required field "Problem.chat_id"`)}
+	}
+	if v, ok := pc.mutation.ChatID(); ok {
+		if err := v.Validate(); err != nil {
+			return &ValidationError{Name: "chat_id", err: fmt.Errorf(`store: validator failed for field "Problem.chat_id": %w`, err)}
+		}
 	}
 	if v, ok := pc.mutation.ManagerID(); ok {
 		if err := v.Validate(); err != nil {
@@ -204,27 +217,11 @@ func (pc *ProblemCreate) createSpec() (*Problem, *sqlgraph.CreateSpec) {
 	}
 	if value, ok := pc.mutation.ResolvedAt(); ok {
 		_spec.SetField(problem.FieldResolvedAt, field.TypeTime, value)
-		_node.ResolvedAt = &value
+		_node.ResolvedAt = value
 	}
 	if value, ok := pc.mutation.CreatedAt(); ok {
 		_spec.SetField(problem.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
-	}
-	if nodes := pc.mutation.MessagesIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   problem.MessagesTable,
-			Columns: []string{problem.MessagesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(message.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := pc.mutation.ChatIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -240,7 +237,23 @@ func (pc *ProblemCreate) createSpec() (*Problem, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.chat_problems = &nodes[0]
+		_node.ChatID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := pc.mutation.MessagesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   problem.MessagesTable,
+			Columns: []string{problem.MessagesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(message.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

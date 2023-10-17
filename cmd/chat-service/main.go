@@ -38,7 +38,7 @@ func run() (errReturned error) {
 
 	err = logger.Init(logger.NewOptions(
 		cfg.Log.Level,
-		logger.WithSentryDNS(cfg.Sentry.Dsn),
+		logger.WithSentryDNS(cfg.Sentry.DSN),
 		logger.WithProductionMode(cfg.Global.IsProd()),
 	))
 	if err != nil {

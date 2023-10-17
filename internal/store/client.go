@@ -321,22 +321,6 @@ func (c *ChatClient) GetX(ctx context.Context, id types.ChatID) *Chat {
 	return obj
 }
 
-// QueryProblems queries the problems edge of a Chat.
-func (c *ChatClient) QueryProblems(ch *Chat) *ProblemQuery {
-	query := (&ProblemClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := ch.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(chat.Table, chat.FieldID, id),
-			sqlgraph.To(problem.Table, problem.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, chat.ProblemsTable, chat.ProblemsColumn),
-		)
-		fromV = sqlgraph.Neighbors(ch.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // QueryMessages queries the messages edge of a Chat.
 func (c *ChatClient) QueryMessages(ch *Chat) *MessageQuery {
 	query := (&MessageClient{config: c.config}).Query()
@@ -346,6 +330,22 @@ func (c *ChatClient) QueryMessages(ch *Chat) *MessageQuery {
 			sqlgraph.From(chat.Table, chat.FieldID, id),
 			sqlgraph.To(message.Table, message.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, chat.MessagesTable, chat.MessagesColumn),
+		)
+		fromV = sqlgraph.Neighbors(ch.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryProblems queries the problems edge of a Chat.
+func (c *ChatClient) QueryProblems(ch *Chat) *ProblemQuery {
+	query := (&ProblemClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := ch.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(chat.Table, chat.FieldID, id),
+			sqlgraph.To(problem.Table, problem.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, chat.ProblemsTable, chat.ProblemsColumn),
 		)
 		fromV = sqlgraph.Neighbors(ch.driver.Dialect(), step)
 		return fromV, nil
@@ -651,22 +651,6 @@ func (c *ProblemClient) GetX(ctx context.Context, id types.ProblemID) *Problem {
 	return obj
 }
 
-// QueryMessages queries the messages edge of a Problem.
-func (c *ProblemClient) QueryMessages(pr *Problem) *MessageQuery {
-	query := (&MessageClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := pr.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(problem.Table, problem.FieldID, id),
-			sqlgraph.To(message.Table, message.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, problem.MessagesTable, problem.MessagesColumn),
-		)
-		fromV = sqlgraph.Neighbors(pr.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // QueryChat queries the chat edge of a Problem.
 func (c *ProblemClient) QueryChat(pr *Problem) *ChatQuery {
 	query := (&ChatClient{config: c.config}).Query()
@@ -676,6 +660,22 @@ func (c *ProblemClient) QueryChat(pr *Problem) *ChatQuery {
 			sqlgraph.From(problem.Table, problem.FieldID, id),
 			sqlgraph.To(chat.Table, chat.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, problem.ChatTable, problem.ChatColumn),
+		)
+		fromV = sqlgraph.Neighbors(pr.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryMessages queries the messages edge of a Problem.
+func (c *ProblemClient) QueryMessages(pr *Problem) *MessageQuery {
+	query := (&MessageClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := pr.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(problem.Table, problem.FieldID, id),
+			sqlgraph.To(message.Table, message.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, problem.MessagesTable, problem.MessagesColumn),
 		)
 		fromV = sqlgraph.Neighbors(pr.driver.Dialect(), step)
 		return fromV, nil

@@ -47,14 +47,14 @@ func New(opts Options) (*Server, error) {
 	}
 
 	e := echo.New()
+	e.Use(middlewares.Logger(opts.logger))
 	e.Use(middlewares.Recover(opts.logger))
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: opts.allowOrigins,
 		AllowMethods: []string{http.MethodPost},
 	}))
-	e.Use(middleware.BodyLimit("12K")) // 3000 (Максимальная длина сообщения) * 4 байт
+	e.Use(middleware.BodyLimit("12K")) // 3000 characters * 4 байт
 	e.Use(middlewares.NewKeycloakTokenAuth(opts.keycloakIntrospector, opts.authResource, opts.authRole))
-	e.Use(middlewares.Logger(opts.logger))
 
 	v1 := e.Group("v1", oapimdlwr.OapiRequestValidatorWithOptions(opts.v1Swagger, &oapimdlwr.Options{
 		Options: openapi3filter.Options{

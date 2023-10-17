@@ -15,6 +15,10 @@ const (
 	Label = "message"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
+	// FieldChatID holds the string denoting the chat_id field in the database.
+	FieldChatID = "chat_id"
+	// FieldProblemID holds the string denoting the problem_id field in the database.
+	FieldProblemID = "problem_id"
 	// FieldAuthorID holds the string denoting the author_id field in the database.
 	FieldAuthorID = "author_id"
 	// FieldIsVisibleForClient holds the string denoting the is_visible_for_client field in the database.
@@ -43,19 +47,21 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "chat" package.
 	ChatInverseTable = "chats"
 	// ChatColumn is the table column denoting the chat relation/edge.
-	ChatColumn = "chat_messages"
+	ChatColumn = "chat_id"
 	// ProblemTable is the table that holds the problem relation/edge.
 	ProblemTable = "messages"
 	// ProblemInverseTable is the table name for the Problem entity.
 	// It exists in this package in order to avoid circular dependency with the "problem" package.
 	ProblemInverseTable = "problems"
 	// ProblemColumn is the table column denoting the problem relation/edge.
-	ProblemColumn = "problem_messages"
+	ProblemColumn = "problem_id"
 )
 
 // Columns holds all SQL columns for message fields.
 var Columns = []string{
 	FieldID,
+	FieldChatID,
+	FieldProblemID,
 	FieldAuthorID,
 	FieldIsVisibleForClient,
 	FieldIsVisibleForManager,
@@ -66,13 +72,6 @@ var Columns = []string{
 	FieldCreatedAt,
 }
 
-// ForeignKeys holds the SQL foreign-keys that are owned by the "messages"
-// table and are not defined as standalone fields in the schema.
-var ForeignKeys = []string{
-	"chat_messages",
-	"problem_messages",
-}
-
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
@@ -80,15 +79,14 @@ func ValidColumn(column string) bool {
 			return true
 		}
 	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
-			return true
-		}
-	}
 	return false
 }
 
 var (
+	// DefaultIsVisibleForClient holds the default value on creation for the "is_visible_for_client" field.
+	DefaultIsVisibleForClient bool
+	// DefaultIsVisibleForManager holds the default value on creation for the "is_visible_for_manager" field.
+	DefaultIsVisibleForManager bool
 	// BodyValidator is a validator for the "body" field. It is called by the builders before save.
 	BodyValidator func(string) error
 	// DefaultIsBlocked holds the default value on creation for the "is_blocked" field.
@@ -107,6 +105,16 @@ type OrderOption func(*sql.Selector)
 // ByID orders the results by the id field.
 func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByChatID orders the results by the chat_id field.
+func ByChatID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldChatID, opts...).ToFunc()
+}
+
+// ByProblemID orders the results by the problem_id field.
+func ByProblemID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldProblemID, opts...).ToFunc()
 }
 
 // ByAuthorID orders the results by the author_id field.

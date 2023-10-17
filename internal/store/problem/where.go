@@ -56,6 +56,11 @@ func IDLTE(id types.ProblemID) predicate.Problem {
 	return predicate.Problem(sql.FieldLTE(FieldID, id))
 }
 
+// ChatID applies equality check predicate on the "chat_id" field. It's identical to ChatIDEQ.
+func ChatID(v types.ChatID) predicate.Problem {
+	return predicate.Problem(sql.FieldEQ(FieldChatID, v))
+}
+
 // ManagerID applies equality check predicate on the "manager_id" field. It's identical to ManagerIDEQ.
 func ManagerID(v types.UserID) predicate.Problem {
 	return predicate.Problem(sql.FieldEQ(FieldManagerID, v))
@@ -69,6 +74,26 @@ func ResolvedAt(v time.Time) predicate.Problem {
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.Problem {
 	return predicate.Problem(sql.FieldEQ(FieldCreatedAt, v))
+}
+
+// ChatIDEQ applies the EQ predicate on the "chat_id" field.
+func ChatIDEQ(v types.ChatID) predicate.Problem {
+	return predicate.Problem(sql.FieldEQ(FieldChatID, v))
+}
+
+// ChatIDNEQ applies the NEQ predicate on the "chat_id" field.
+func ChatIDNEQ(v types.ChatID) predicate.Problem {
+	return predicate.Problem(sql.FieldNEQ(FieldChatID, v))
+}
+
+// ChatIDIn applies the In predicate on the "chat_id" field.
+func ChatIDIn(vs ...types.ChatID) predicate.Problem {
+	return predicate.Problem(sql.FieldIn(FieldChatID, vs...))
+}
+
+// ChatIDNotIn applies the NotIn predicate on the "chat_id" field.
+func ChatIDNotIn(vs ...types.ChatID) predicate.Problem {
+	return predicate.Problem(sql.FieldNotIn(FieldChatID, vs...))
 }
 
 // ManagerIDEQ applies the EQ predicate on the "manager_id" field.
@@ -109,6 +134,16 @@ func ManagerIDLT(v types.UserID) predicate.Problem {
 // ManagerIDLTE applies the LTE predicate on the "manager_id" field.
 func ManagerIDLTE(v types.UserID) predicate.Problem {
 	return predicate.Problem(sql.FieldLTE(FieldManagerID, v))
+}
+
+// ManagerIDIsNil applies the IsNil predicate on the "manager_id" field.
+func ManagerIDIsNil() predicate.Problem {
+	return predicate.Problem(sql.FieldIsNull(FieldManagerID))
+}
+
+// ManagerIDNotNil applies the NotNil predicate on the "manager_id" field.
+func ManagerIDNotNil() predicate.Problem {
+	return predicate.Problem(sql.FieldNotNull(FieldManagerID))
 }
 
 // ResolvedAtEQ applies the EQ predicate on the "resolved_at" field.
@@ -201,29 +236,6 @@ func CreatedAtLTE(v time.Time) predicate.Problem {
 	return predicate.Problem(sql.FieldLTE(FieldCreatedAt, v))
 }
 
-// HasMessages applies the HasEdge predicate on the "messages" edge.
-func HasMessages() predicate.Problem {
-	return predicate.Problem(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, MessagesTable, MessagesColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasMessagesWith applies the HasEdge predicate on the "messages" edge with a given conditions (other predicates).
-func HasMessagesWith(preds ...predicate.Message) predicate.Problem {
-	return predicate.Problem(func(s *sql.Selector) {
-		step := newMessagesStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
 // HasChat applies the HasEdge predicate on the "chat" edge.
 func HasChat() predicate.Problem {
 	return predicate.Problem(func(s *sql.Selector) {
@@ -239,6 +251,29 @@ func HasChat() predicate.Problem {
 func HasChatWith(preds ...predicate.Chat) predicate.Problem {
 	return predicate.Problem(func(s *sql.Selector) {
 		step := newChatStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasMessages applies the HasEdge predicate on the "messages" edge.
+func HasMessages() predicate.Problem {
+	return predicate.Problem(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, MessagesTable, MessagesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasMessagesWith applies the HasEdge predicate on the "messages" edge with a given conditions (other predicates).
+func HasMessagesWith(preds ...predicate.Message) predicate.Problem {
+	return predicate.Problem(func(s *sql.Selector) {
+		step := newMessagesStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

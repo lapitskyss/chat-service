@@ -25,8 +25,8 @@ type ChatQuery struct {
 	order        []chat.OrderOption
 	inters       []Interceptor
 	predicates   []predicate.Chat
-	withProblems *ProblemQuery
 	withMessages *MessageQuery
+	withProblems *ProblemQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -63,28 +63,6 @@ func (cq *ChatQuery) Order(o ...chat.OrderOption) *ChatQuery {
 	return cq
 }
 
-// QueryProblems chains the current query on the "problems" edge.
-func (cq *ChatQuery) QueryProblems() *ProblemQuery {
-	query := (&ProblemClient{config: cq.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := cq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := cq.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(chat.Table, chat.FieldID, selector),
-			sqlgraph.To(problem.Table, problem.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, chat.ProblemsTable, chat.ProblemsColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
 // QueryMessages chains the current query on the "messages" edge.
 func (cq *ChatQuery) QueryMessages() *MessageQuery {
 	query := (&MessageClient{config: cq.config}).Query()
@@ -100,6 +78,28 @@ func (cq *ChatQuery) QueryMessages() *MessageQuery {
 			sqlgraph.From(chat.Table, chat.FieldID, selector),
 			sqlgraph.To(message.Table, message.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, chat.MessagesTable, chat.MessagesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryProblems chains the current query on the "problems" edge.
+func (cq *ChatQuery) QueryProblems() *ProblemQuery {
+	query := (&ProblemClient{config: cq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := cq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := cq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(chat.Table, chat.FieldID, selector),
+			sqlgraph.To(problem.Table, problem.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, chat.ProblemsTable, chat.ProblemsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
 		return fromU, nil
@@ -299,23 +299,12 @@ func (cq *ChatQuery) Clone() *ChatQuery {
 		order:        append([]chat.OrderOption{}, cq.order...),
 		inters:       append([]Interceptor{}, cq.inters...),
 		predicates:   append([]predicate.Chat{}, cq.predicates...),
-		withProblems: cq.withProblems.Clone(),
 		withMessages: cq.withMessages.Clone(),
+		withProblems: cq.withProblems.Clone(),
 		// clone intermediate query.
 		sql:  cq.sql.Clone(),
 		path: cq.path,
 	}
-}
-
-// WithProblems tells the query-builder to eager-load the nodes that are connected to
-// the "problems" edge. The optional arguments are used to configure the query builder of the edge.
-func (cq *ChatQuery) WithProblems(opts ...func(*ProblemQuery)) *ChatQuery {
-	query := (&ProblemClient{config: cq.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	cq.withProblems = query
-	return cq
 }
 
 // WithMessages tells the query-builder to eager-load the nodes that are connected to
@@ -326,6 +315,17 @@ func (cq *ChatQuery) WithMessages(opts ...func(*MessageQuery)) *ChatQuery {
 		opt(query)
 	}
 	cq.withMessages = query
+	return cq
+}
+
+// WithProblems tells the query-builder to eager-load the nodes that are connected to
+// the "problems" edge. The optional arguments are used to configure the query builder of the edge.
+func (cq *ChatQuery) WithProblems(opts ...func(*ProblemQuery)) *ChatQuery {
+	query := (&ProblemClient{config: cq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	cq.withProblems = query
 	return cq
 }
 
@@ -408,8 +408,8 @@ func (cq *ChatQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Chat, e
 		nodes       = []*Chat{}
 		_spec       = cq.querySpec()
 		loadedTypes = [2]bool{
-			cq.withProblems != nil,
 			cq.withMessages != nil,
+			cq.withProblems != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -430,13 +430,6 @@ func (cq *ChatQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Chat, e
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := cq.withProblems; query != nil {
-		if err := cq.loadProblems(ctx, query, nodes,
-			func(n *Chat) { n.Edges.Problems = []*Problem{} },
-			func(n *Chat, e *Problem) { n.Edges.Problems = append(n.Edges.Problems, e) }); err != nil {
-			return nil, err
-		}
-	}
 	if query := cq.withMessages; query != nil {
 		if err := cq.loadMessages(ctx, query, nodes,
 			func(n *Chat) { n.Edges.Messages = []*Message{} },
@@ -444,40 +437,16 @@ func (cq *ChatQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Chat, e
 			return nil, err
 		}
 	}
+	if query := cq.withProblems; query != nil {
+		if err := cq.loadProblems(ctx, query, nodes,
+			func(n *Chat) { n.Edges.Problems = []*Problem{} },
+			func(n *Chat, e *Problem) { n.Edges.Problems = append(n.Edges.Problems, e) }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
 }
 
-func (cq *ChatQuery) loadProblems(ctx context.Context, query *ProblemQuery, nodes []*Chat, init func(*Chat), assign func(*Chat, *Problem)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[types.ChatID]*Chat)
-	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
-		}
-	}
-	query.withFKs = true
-	query.Where(predicate.Problem(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(chat.ProblemsColumn), fks...))
-	}))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		fk := n.chat_problems
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "chat_problems" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
-		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "chat_problems" returned %v for node %v`, *fk, n.ID)
-		}
-		assign(node, n)
-	}
-	return nil
-}
 func (cq *ChatQuery) loadMessages(ctx context.Context, query *MessageQuery, nodes []*Chat, init func(*Chat), assign func(*Chat, *Message)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[types.ChatID]*Chat)
@@ -488,7 +457,9 @@ func (cq *ChatQuery) loadMessages(ctx context.Context, query *MessageQuery, node
 			init(nodes[i])
 		}
 	}
-	query.withFKs = true
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(message.FieldChatID)
+	}
 	query.Where(predicate.Message(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(chat.MessagesColumn), fks...))
 	}))
@@ -497,13 +468,40 @@ func (cq *ChatQuery) loadMessages(ctx context.Context, query *MessageQuery, node
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.chat_messages
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "chat_messages" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
+		fk := n.ChatID
+		node, ok := nodeids[fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "chat_messages" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "chat_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (cq *ChatQuery) loadProblems(ctx context.Context, query *ProblemQuery, nodes []*Chat, init func(*Chat), assign func(*Chat, *Problem)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[types.ChatID]*Chat)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(problem.FieldChatID)
+	}
+	query.Where(predicate.Problem(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(chat.ProblemsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ChatID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "chat_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}

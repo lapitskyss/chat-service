@@ -57,21 +57,6 @@ func (cc *ChatCreate) SetNillableID(ti *types.ChatID) *ChatCreate {
 	return cc
 }
 
-// AddProblemIDs adds the "problems" edge to the Problem entity by IDs.
-func (cc *ChatCreate) AddProblemIDs(ids ...types.ProblemID) *ChatCreate {
-	cc.mutation.AddProblemIDs(ids...)
-	return cc
-}
-
-// AddProblems adds the "problems" edges to the Problem entity.
-func (cc *ChatCreate) AddProblems(p ...*Problem) *ChatCreate {
-	ids := make([]types.ProblemID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
-	}
-	return cc.AddProblemIDs(ids...)
-}
-
 // AddMessageIDs adds the "messages" edge to the Message entity by IDs.
 func (cc *ChatCreate) AddMessageIDs(ids ...types.MessageID) *ChatCreate {
 	cc.mutation.AddMessageIDs(ids...)
@@ -85,6 +70,21 @@ func (cc *ChatCreate) AddMessages(m ...*Message) *ChatCreate {
 		ids[i] = m[i].ID
 	}
 	return cc.AddMessageIDs(ids...)
+}
+
+// AddProblemIDs adds the "problems" edge to the Problem entity by IDs.
+func (cc *ChatCreate) AddProblemIDs(ids ...types.ProblemID) *ChatCreate {
+	cc.mutation.AddProblemIDs(ids...)
+	return cc
+}
+
+// AddProblems adds the "problems" edges to the Problem entity.
+func (cc *ChatCreate) AddProblems(p ...*Problem) *ChatCreate {
+	ids := make([]types.ProblemID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return cc.AddProblemIDs(ids...)
 }
 
 // Mutation returns the ChatMutation object of the builder.
@@ -193,22 +193,6 @@ func (cc *ChatCreate) createSpec() (*Chat, *sqlgraph.CreateSpec) {
 		_spec.SetField(chat.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
 	}
-	if nodes := cc.mutation.ProblemsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   chat.ProblemsTable,
-			Columns: []string{chat.ProblemsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(problem.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
 	if nodes := cc.mutation.MessagesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -218,6 +202,22 @@ func (cc *ChatCreate) createSpec() (*Chat, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(message.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := cc.mutation.ProblemsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   chat.ProblemsTable,
+			Columns: []string{chat.ProblemsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(problem.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

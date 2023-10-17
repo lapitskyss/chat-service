@@ -30,10 +30,19 @@ func (cu *ChatUpdate) Where(ps ...predicate.Chat) *ChatUpdate {
 	return cu
 }
 
-// SetClientID sets the "client_id" field.
-func (cu *ChatUpdate) SetClientID(ti types.UserID) *ChatUpdate {
-	cu.mutation.SetClientID(ti)
+// AddMessageIDs adds the "messages" edge to the Message entity by IDs.
+func (cu *ChatUpdate) AddMessageIDs(ids ...types.MessageID) *ChatUpdate {
+	cu.mutation.AddMessageIDs(ids...)
 	return cu
+}
+
+// AddMessages adds the "messages" edges to the Message entity.
+func (cu *ChatUpdate) AddMessages(m ...*Message) *ChatUpdate {
+	ids := make([]types.MessageID, len(m))
+	for i := range m {
+		ids[i] = m[i].ID
+	}
+	return cu.AddMessageIDs(ids...)
 }
 
 // AddProblemIDs adds the "problems" edge to the Problem entity by IDs.
@@ -51,45 +60,9 @@ func (cu *ChatUpdate) AddProblems(p ...*Problem) *ChatUpdate {
 	return cu.AddProblemIDs(ids...)
 }
 
-// AddMessageIDs adds the "messages" edge to the Message entity by IDs.
-func (cu *ChatUpdate) AddMessageIDs(ids ...types.MessageID) *ChatUpdate {
-	cu.mutation.AddMessageIDs(ids...)
-	return cu
-}
-
-// AddMessages adds the "messages" edges to the Message entity.
-func (cu *ChatUpdate) AddMessages(m ...*Message) *ChatUpdate {
-	ids := make([]types.MessageID, len(m))
-	for i := range m {
-		ids[i] = m[i].ID
-	}
-	return cu.AddMessageIDs(ids...)
-}
-
 // Mutation returns the ChatMutation object of the builder.
 func (cu *ChatUpdate) Mutation() *ChatMutation {
 	return cu.mutation
-}
-
-// ClearProblems clears all "problems" edges to the Problem entity.
-func (cu *ChatUpdate) ClearProblems() *ChatUpdate {
-	cu.mutation.ClearProblems()
-	return cu
-}
-
-// RemoveProblemIDs removes the "problems" edge to Problem entities by IDs.
-func (cu *ChatUpdate) RemoveProblemIDs(ids ...types.ProblemID) *ChatUpdate {
-	cu.mutation.RemoveProblemIDs(ids...)
-	return cu
-}
-
-// RemoveProblems removes "problems" edges to Problem entities.
-func (cu *ChatUpdate) RemoveProblems(p ...*Problem) *ChatUpdate {
-	ids := make([]types.ProblemID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
-	}
-	return cu.RemoveProblemIDs(ids...)
 }
 
 // ClearMessages clears all "messages" edges to the Message entity.
@@ -111,6 +84,27 @@ func (cu *ChatUpdate) RemoveMessages(m ...*Message) *ChatUpdate {
 		ids[i] = m[i].ID
 	}
 	return cu.RemoveMessageIDs(ids...)
+}
+
+// ClearProblems clears all "problems" edges to the Problem entity.
+func (cu *ChatUpdate) ClearProblems() *ChatUpdate {
+	cu.mutation.ClearProblems()
+	return cu
+}
+
+// RemoveProblemIDs removes the "problems" edge to Problem entities by IDs.
+func (cu *ChatUpdate) RemoveProblemIDs(ids ...types.ProblemID) *ChatUpdate {
+	cu.mutation.RemoveProblemIDs(ids...)
+	return cu
+}
+
+// RemoveProblems removes "problems" edges to Problem entities.
+func (cu *ChatUpdate) RemoveProblems(p ...*Problem) *ChatUpdate {
+	ids := make([]types.ProblemID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return cu.RemoveProblemIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -148,54 +142,6 @@ func (cu *ChatUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				ps[i](selector)
 			}
 		}
-	}
-	if value, ok := cu.mutation.ClientID(); ok {
-		_spec.SetField(chat.FieldClientID, field.TypeUUID, value)
-	}
-	if cu.mutation.ProblemsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   chat.ProblemsTable,
-			Columns: []string{chat.ProblemsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(problem.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := cu.mutation.RemovedProblemsIDs(); len(nodes) > 0 && !cu.mutation.ProblemsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   chat.ProblemsTable,
-			Columns: []string{chat.ProblemsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(problem.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := cu.mutation.ProblemsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   chat.ProblemsTable,
-			Columns: []string{chat.ProblemsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(problem.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if cu.mutation.MessagesCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -242,6 +188,51 @@ func (cu *ChatUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if cu.mutation.ProblemsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   chat.ProblemsTable,
+			Columns: []string{chat.ProblemsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(problem.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cu.mutation.RemovedProblemsIDs(); len(nodes) > 0 && !cu.mutation.ProblemsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   chat.ProblemsTable,
+			Columns: []string{chat.ProblemsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(problem.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cu.mutation.ProblemsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   chat.ProblemsTable,
+			Columns: []string{chat.ProblemsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(problem.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, cu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{chat.Label}
@@ -262,10 +253,19 @@ type ChatUpdateOne struct {
 	mutation *ChatMutation
 }
 
-// SetClientID sets the "client_id" field.
-func (cuo *ChatUpdateOne) SetClientID(ti types.UserID) *ChatUpdateOne {
-	cuo.mutation.SetClientID(ti)
+// AddMessageIDs adds the "messages" edge to the Message entity by IDs.
+func (cuo *ChatUpdateOne) AddMessageIDs(ids ...types.MessageID) *ChatUpdateOne {
+	cuo.mutation.AddMessageIDs(ids...)
 	return cuo
+}
+
+// AddMessages adds the "messages" edges to the Message entity.
+func (cuo *ChatUpdateOne) AddMessages(m ...*Message) *ChatUpdateOne {
+	ids := make([]types.MessageID, len(m))
+	for i := range m {
+		ids[i] = m[i].ID
+	}
+	return cuo.AddMessageIDs(ids...)
 }
 
 // AddProblemIDs adds the "problems" edge to the Problem entity by IDs.
@@ -283,45 +283,9 @@ func (cuo *ChatUpdateOne) AddProblems(p ...*Problem) *ChatUpdateOne {
 	return cuo.AddProblemIDs(ids...)
 }
 
-// AddMessageIDs adds the "messages" edge to the Message entity by IDs.
-func (cuo *ChatUpdateOne) AddMessageIDs(ids ...types.MessageID) *ChatUpdateOne {
-	cuo.mutation.AddMessageIDs(ids...)
-	return cuo
-}
-
-// AddMessages adds the "messages" edges to the Message entity.
-func (cuo *ChatUpdateOne) AddMessages(m ...*Message) *ChatUpdateOne {
-	ids := make([]types.MessageID, len(m))
-	for i := range m {
-		ids[i] = m[i].ID
-	}
-	return cuo.AddMessageIDs(ids...)
-}
-
 // Mutation returns the ChatMutation object of the builder.
 func (cuo *ChatUpdateOne) Mutation() *ChatMutation {
 	return cuo.mutation
-}
-
-// ClearProblems clears all "problems" edges to the Problem entity.
-func (cuo *ChatUpdateOne) ClearProblems() *ChatUpdateOne {
-	cuo.mutation.ClearProblems()
-	return cuo
-}
-
-// RemoveProblemIDs removes the "problems" edge to Problem entities by IDs.
-func (cuo *ChatUpdateOne) RemoveProblemIDs(ids ...types.ProblemID) *ChatUpdateOne {
-	cuo.mutation.RemoveProblemIDs(ids...)
-	return cuo
-}
-
-// RemoveProblems removes "problems" edges to Problem entities.
-func (cuo *ChatUpdateOne) RemoveProblems(p ...*Problem) *ChatUpdateOne {
-	ids := make([]types.ProblemID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
-	}
-	return cuo.RemoveProblemIDs(ids...)
 }
 
 // ClearMessages clears all "messages" edges to the Message entity.
@@ -343,6 +307,27 @@ func (cuo *ChatUpdateOne) RemoveMessages(m ...*Message) *ChatUpdateOne {
 		ids[i] = m[i].ID
 	}
 	return cuo.RemoveMessageIDs(ids...)
+}
+
+// ClearProblems clears all "problems" edges to the Problem entity.
+func (cuo *ChatUpdateOne) ClearProblems() *ChatUpdateOne {
+	cuo.mutation.ClearProblems()
+	return cuo
+}
+
+// RemoveProblemIDs removes the "problems" edge to Problem entities by IDs.
+func (cuo *ChatUpdateOne) RemoveProblemIDs(ids ...types.ProblemID) *ChatUpdateOne {
+	cuo.mutation.RemoveProblemIDs(ids...)
+	return cuo
+}
+
+// RemoveProblems removes "problems" edges to Problem entities.
+func (cuo *ChatUpdateOne) RemoveProblems(p ...*Problem) *ChatUpdateOne {
+	ids := make([]types.ProblemID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return cuo.RemoveProblemIDs(ids...)
 }
 
 // Where appends a list predicates to the ChatUpdate builder.
@@ -411,8 +396,50 @@ func (cuo *ChatUpdateOne) sqlSave(ctx context.Context) (_node *Chat, err error) 
 			}
 		}
 	}
-	if value, ok := cuo.mutation.ClientID(); ok {
-		_spec.SetField(chat.FieldClientID, field.TypeUUID, value)
+	if cuo.mutation.MessagesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   chat.MessagesTable,
+			Columns: []string{chat.MessagesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(message.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cuo.mutation.RemovedMessagesIDs(); len(nodes) > 0 && !cuo.mutation.MessagesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   chat.MessagesTable,
+			Columns: []string{chat.MessagesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(message.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cuo.mutation.MessagesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   chat.MessagesTable,
+			Columns: []string{chat.MessagesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(message.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if cuo.mutation.ProblemsCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -452,51 +479,6 @@ func (cuo *ChatUpdateOne) sqlSave(ctx context.Context) (_node *Chat, err error) 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(problem.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if cuo.mutation.MessagesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   chat.MessagesTable,
-			Columns: []string{chat.MessagesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(message.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := cuo.mutation.RemovedMessagesIDs(); len(nodes) > 0 && !cuo.mutation.MessagesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   chat.MessagesTable,
-			Columns: []string{chat.MessagesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(message.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := cuo.mutation.MessagesIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   chat.MessagesTable,
-			Columns: []string{chat.MessagesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(message.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

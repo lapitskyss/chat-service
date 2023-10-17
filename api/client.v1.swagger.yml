@@ -45,7 +45,7 @@ components:
         type: string
         format: uuid
         x-go-type: types.RequestID
-        x-go-type-import:
+        x-go-import:
           path: "github.com/lapitskyss/chat-service/internal/types"
       required: true
 
@@ -72,12 +72,17 @@ components:
       properties:
         messages:
           type: array
-          items:
-            $ref: '#/components/schemas/Message'
+          items: { $ref: "#/components/schemas/Message" }
 
     Message:
       required: [ id, authorId, body, createdAt ]
       properties:
+        id:
+          type: string
+          format: uuid
+          x-go-type: types.MessageID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
         authorId:
           type: string
           format: uuid
@@ -89,9 +94,3 @@ components:
         createdAt:
           type: string
           format: date-time
-        id:
-          type: string
-          format: uuid
-          x-go-type: types.MessageID
-          x-go-type-import:
-            path: "github.com/lapitskyss/chat-service/internal/types"

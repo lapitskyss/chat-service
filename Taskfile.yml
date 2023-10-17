@@ -34,6 +34,8 @@ vars:
 
   DOCKER_COMPOSE_CMD: docker compose {{range .DOCKER_COMPOSE_PATHS | splitArgs }} -f {{.}} {{end}}
 
+  ENT_SCHEMA: ./internal/store/schema
+
   CLIENT_V1_SRC: ./api/client.v1.swagger.yml
   CLIENT_V1_DST: ./internal/server-client/v1/server.gen.go
   CLIENT_V1_PKG: clientv1
@@ -66,7 +68,7 @@ tasks:
       - echo "- Lint"
       - mkdir -p {{.GOLANGCI_LINT_CACHE}}
       - task: lint:cmd
-        vars: {CLI_ARGS: "run -v --fix --timeout=5m ./..."}
+        vars: { CLI_ARGS: "run -v --fix --timeout=5m ./..." }
 
   lint:cmd:
     cmds:
@@ -150,12 +152,12 @@ tasks:
 
   ent:new:
     cmds:
-      - ent new --target internal/store/schema {{.CLI_ARGS}}
+      - ent new --target {{.ENT_SCHEMA}} {{.CLI_ARGS}}
       - task: tidy
 
   ent:gen:
     cmds:
-      - ent generate ./internal/store/schema
+      - ent generate {{.ENT_SCHEMA}}
       - task: tidy
 
   kc:export:
@@ -167,4 +169,6 @@ tasks:
 
   gen:api:
     cmds:
-      - oapi-codegen -package {{.CLIENT_V1_PKG}} -generate types,server,spec {{.CLIENT_V1_SRC}} > {{.CLIENT_V1_DST}}
+      - echo "Generate client server..."
+      - oapi-codegen --old-config-style -generate types,server,spec -package {{.CLIENT_V1_PKG}} {{.CLIENT_V1_SRC}} > {{.CLIENT_V1_DST}}
+      - task: tidy

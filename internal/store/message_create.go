@@ -23,9 +23,29 @@ type MessageCreate struct {
 	hooks    []Hook
 }
 
+// SetChatID sets the "chat_id" field.
+func (mc *MessageCreate) SetChatID(ti types.ChatID) *MessageCreate {
+	mc.mutation.SetChatID(ti)
+	return mc
+}
+
+// SetProblemID sets the "problem_id" field.
+func (mc *MessageCreate) SetProblemID(ti types.ProblemID) *MessageCreate {
+	mc.mutation.SetProblemID(ti)
+	return mc
+}
+
 // SetAuthorID sets the "author_id" field.
 func (mc *MessageCreate) SetAuthorID(ti types.UserID) *MessageCreate {
 	mc.mutation.SetAuthorID(ti)
+	return mc
+}
+
+// SetNillableAuthorID sets the "author_id" field if the given value is not nil.
+func (mc *MessageCreate) SetNillableAuthorID(ti *types.UserID) *MessageCreate {
+	if ti != nil {
+		mc.SetAuthorID(*ti)
+	}
 	return mc
 }
 
@@ -35,9 +55,25 @@ func (mc *MessageCreate) SetIsVisibleForClient(b bool) *MessageCreate {
 	return mc
 }
 
+// SetNillableIsVisibleForClient sets the "is_visible_for_client" field if the given value is not nil.
+func (mc *MessageCreate) SetNillableIsVisibleForClient(b *bool) *MessageCreate {
+	if b != nil {
+		mc.SetIsVisibleForClient(*b)
+	}
+	return mc
+}
+
 // SetIsVisibleForManager sets the "is_visible_for_manager" field.
 func (mc *MessageCreate) SetIsVisibleForManager(b bool) *MessageCreate {
 	mc.mutation.SetIsVisibleForManager(b)
+	return mc
+}
+
+// SetNillableIsVisibleForManager sets the "is_visible_for_manager" field if the given value is not nil.
+func (mc *MessageCreate) SetNillableIsVisibleForManager(b *bool) *MessageCreate {
+	if b != nil {
+		mc.SetIsVisibleForManager(*b)
+	}
 	return mc
 }
 
@@ -117,37 +153,9 @@ func (mc *MessageCreate) SetNillableID(ti *types.MessageID) *MessageCreate {
 	return mc
 }
 
-// SetChatID sets the "chat" edge to the Chat entity by ID.
-func (mc *MessageCreate) SetChatID(id types.ChatID) *MessageCreate {
-	mc.mutation.SetChatID(id)
-	return mc
-}
-
-// SetNillableChatID sets the "chat" edge to the Chat entity by ID if the given value is not nil.
-func (mc *MessageCreate) SetNillableChatID(id *types.ChatID) *MessageCreate {
-	if id != nil {
-		mc = mc.SetChatID(*id)
-	}
-	return mc
-}
-
 // SetChat sets the "chat" edge to the Chat entity.
 func (mc *MessageCreate) SetChat(c *Chat) *MessageCreate {
 	return mc.SetChatID(c.ID)
-}
-
-// SetProblemID sets the "problem" edge to the Problem entity by ID.
-func (mc *MessageCreate) SetProblemID(id types.ProblemID) *MessageCreate {
-	mc.mutation.SetProblemID(id)
-	return mc
-}
-
-// SetNillableProblemID sets the "problem" edge to the Problem entity by ID if the given value is not nil.
-func (mc *MessageCreate) SetNillableProblemID(id *types.ProblemID) *MessageCreate {
-	if id != nil {
-		mc = mc.SetProblemID(*id)
-	}
-	return mc
 }
 
 // SetProblem sets the "problem" edge to the Problem entity.
@@ -190,6 +198,14 @@ func (mc *MessageCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (mc *MessageCreate) defaults() {
+	if _, ok := mc.mutation.IsVisibleForClient(); !ok {
+		v := message.DefaultIsVisibleForClient
+		mc.mutation.SetIsVisibleForClient(v)
+	}
+	if _, ok := mc.mutation.IsVisibleForManager(); !ok {
+		v := message.DefaultIsVisibleForManager
+		mc.mutation.SetIsVisibleForManager(v)
+	}
 	if _, ok := mc.mutation.IsBlocked(); !ok {
 		v := message.DefaultIsBlocked
 		mc.mutation.SetIsBlocked(v)
@@ -210,8 +226,21 @@ func (mc *MessageCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (mc *MessageCreate) check() error {
-	if _, ok := mc.mutation.AuthorID(); !ok {
-		return &ValidationError{Name: "author_id", err: errors.New(`store: missing required field "Message.author_id"`)}
+	if _, ok := mc.mutation.ChatID(); !ok {
+		return &ValidationError{Name: "chat_id", err: errors.New(`store: missing required field "Message.chat_id"`)}
+	}
+	if v, ok := mc.mutation.ChatID(); ok {
+		if err := v.Validate(); err != nil {
+			return &ValidationError{Name: "chat_id", err: fmt.Errorf(`store: validator failed for field "Message.chat_id": %w`, err)}
+		}
+	}
+	if _, ok := mc.mutation.ProblemID(); !ok {
+		return &ValidationError{Name: "problem_id", err: errors.New(`store: missing required field "Message.problem_id"`)}
+	}
+	if v, ok := mc.mutation.ProblemID(); ok {
+		if err := v.Validate(); err != nil {
+			return &ValidationError{Name: "problem_id", err: fmt.Errorf(`store: validator failed for field "Message.problem_id": %w`, err)}
+		}
 	}
 	if v, ok := mc.mutation.AuthorID(); ok {
 		if err := v.Validate(); err != nil {
@@ -245,6 +274,12 @@ func (mc *MessageCreate) check() error {
 		if err := v.Validate(); err != nil {
 			return &ValidationError{Name: "id", err: fmt.Errorf(`store: validator failed for field "Message.id": %w`, err)}
 		}
+	}
+	if _, ok := mc.mutation.ChatID(); !ok {
+		return &ValidationError{Name: "chat", err: errors.New(`store: missing required edge "Message.chat"`)}
+	}
+	if _, ok := mc.mutation.ProblemID(); !ok {
+		return &ValidationError{Name: "problem", err: errors.New(`store: missing required edge "Message.problem"`)}
 	}
 	return nil
 }
@@ -299,7 +334,7 @@ func (mc *MessageCreate) createSpec() (*Message, *sqlgraph.CreateSpec) {
 	}
 	if value, ok := mc.mutation.CheckedAt(); ok {
 		_spec.SetField(message.FieldCheckedAt, field.TypeTime, value)
-		_node.CheckedAt = &value
+		_node.CheckedAt = value
 	}
 	if value, ok := mc.mutation.IsBlocked(); ok {
 		_spec.SetField(message.FieldIsBlocked, field.TypeBool, value)
@@ -327,7 +362,7 @@ func (mc *MessageCreate) createSpec() (*Message, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.chat_messages = &nodes[0]
+		_node.ChatID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := mc.mutation.ProblemIDs(); len(nodes) > 0 {
@@ -344,7 +379,7 @@ func (mc *MessageCreate) createSpec() (*Message, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.problem_messages = &nodes[0]
+		_node.ProblemID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

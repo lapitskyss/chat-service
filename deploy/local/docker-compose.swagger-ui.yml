@@ -10,5 +10,5 @@ services:
       - ../../api:/usr/share/nginx/html/api
     environment:
       URLS: "[
-                { url: \"./api/client.v1.swagger.yml\", name: \"Client\" },
-             ]"
+        {url: 'api/client.v1.swagger.yml', name: 'Bank Support Chat Client API'},
+      ]"
