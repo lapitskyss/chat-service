@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_DB: chat-service
+      POSTGRES_USER: chat-service
+      POSTGRES_PASSWORD: chat-service
+      PGDATA: /var/lib/postgresql/data
+    volumes:
+      - postgresql-data:/var/lib/postgresql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:22.0
+    depends_on:
+      - postgres
+    command:
+      - start-dev --import-realm
+    environment:
+      KC_DB: postgres
+      KC_DB_USERNAME: keycloak
+      KC_DB_URL: "jdbc:postgresql://postgres:5432/keycloak"
+      KC_DB_PASSWORD: keycloak
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    volumes:
+      - ./bank-realm.json:/opt/keycloak/data/import/bank-realm.json
+    ports:
+      - "127.0.0.1:3010:8080"
+
+volumes:
+  postgresql-data:

@@ -56,3 +56,6 @@ res
 
 # Config
 configs/config.toml
+
+# Keycloak Bank realm
+deploy/local/bank-realm.json

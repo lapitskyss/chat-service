@@ -1,10 +1,20 @@
 run:
   tests: true
-  build-tags: [ ] # Ждёт своего часа.
-  skip-dirs: [ ] # Ждёт своего часа.
+  build-tags:
+    - integration
+  skip-dirs:
+    - internal/store/*
 
 issues:
   max-same-issues: 0
+  exclude-rules:
+    - path: internal/clients/keycloak
+      linters: [ tagliatelle ]
+    - path: internal/middlewares/keycloak_claims.go
+      linters: [ tagliatelle ]
+    - path: internal/middlewares/keycloak_token_auth_test.go
+      source: "const token"
+      linters: [ gosec ]
 
 linters-settings:
   gci:

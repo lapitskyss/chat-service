@@ -11,3 +11,12 @@ func init() {
 		panic("cannot read build info")
 	}
 }
+
+func DepsVersion(path string) string {
+	for _, d := range BuildInfo.Deps {
+		if d.Path == path {
+			return d.Version
+		}
+	}
+	return ""
+}

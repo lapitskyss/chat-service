@@ -1,0 +1,96 @@
+openapi: 3.0.3
+info:
+  title: Bank Support Chat Client API
+  version: v1
+
+servers:
+  - url: http://localhost:8080/v1
+    description: Development server
+
+paths:
+  /getHistory:
+    post:
+      description: Get chat history.
+      parameters:
+        - $ref: "#/components/parameters/XRequestIDHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GetHistoryRequest"
+      responses:
+        '200':
+          description: Messages list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetHistoryResponse"
+
+security:
+  - bearerAuth: [ ]
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    XRequestIDHeader:
+      in: header
+      name: X-Request-ID
+      schema:
+        type: string
+        format: uuid
+        x-go-type: types.RequestID
+        x-go-import:
+          path: "github.com/lapitskyss/chat-service/internal/types"
+      required: true
+
+  schemas:
+    # /getHistory
+
+    GetHistoryRequest:
+      properties:
+        pageSize:
+          type: integer
+          minimum: 10
+          maximum: 100
+        cursor:
+          type: string
+
+    GetHistoryResponse:
+      required: [ data ]
+      properties:
+        data:
+          $ref: "#/components/schemas/MessagesPage"
+
+    MessagesPage:
+      required: [ messages ]
+      properties:
+        messages:
+          type: array
+          items: { $ref: "#/components/schemas/Message" }
+
+    Message:
+      required: [ id, authorId, body, createdAt ]
+      properties:
+        id:
+          type: string
+          format: uuid
+          x-go-type: types.MessageID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+        authorId:
+          type: string
+          format: uuid
+          x-go-type: types.UserID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+        body:
+          type: string
+        createdAt:
+          type: string
+          format: date-time

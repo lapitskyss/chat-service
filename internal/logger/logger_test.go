@@ -10,7 +10,7 @@ import (
 )
 
 func TestInit(t *testing.T) {
-	err := logger.Init(logger.NewOptions("error", logger.WithProductionMode(true)))
+	err := logger.Init(logger.NewOptions("error"))
 	require.NoError(t, err)
 
 	zap.L().Named("user-cache").Error("inconsistent state", zap.String("uid", "1234"))

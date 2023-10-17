@@ -6,7 +6,7 @@ silent: true
 vars:
   GO_MODULE: github.com/lapitskyss/chat-service
   GO_FILES:
-    sh: find . -type f -name '*.go' -not -path "./vendor/*" -not -path "*.gen.go" | tr "\n" " "
+    sh: find . -type f -name '*.go' -not -path "./vendor/*" -not -path "./internal/store/*" -not -path "*.gen.go" | tr "\n" " "
 
   GOLANGCI_LINT_VERSION: v1.54.2
   GOLANGCI_LINT_CACHE:
@@ -16,6 +16,29 @@ vars:
     github.com/daixiang0/gci@v0.10.1
     mvdan.cc/gofumpt@v0.4.0
     github.com/kazhuravlev/options-gen/cmd/options-gen@v0.30.0
+    entgo.io/ent/cmd/ent@v0.12.4
+    github.com/deepmap/oapi-codegen/cmd/oapi-codegen@v1.15.0
+    go.uber.org/mock/mockgen@v0.3.0
+
+  TYPES: |
+    ChatID
+    ProblemID
+    MessageID
+    UserID
+    RequestID
+
+  DOCKER_COMPOSE_PATHS: |
+    ./deploy/local/docker-compose.yml
+    ./deploy/local/docker-compose.sentry.yml
+    ./deploy/local/docker-compose.swagger-ui.yml
+
+  DOCKER_COMPOSE_CMD: docker compose {{range .DOCKER_COMPOSE_PATHS | splitArgs }} -f {{.}} {{end}}
+
+  ENT_SCHEMA: ./internal/store/schema
+
+  CLIENT_V1_SRC: ./api/client.v1.swagger.yml
+  CLIENT_V1_DST: ./internal/server-client/v1/server.gen.go
+  CLIENT_V1_PKG: clientv1
 
 tasks:
   default:
@@ -45,7 +68,7 @@ tasks:
       - echo "- Lint"
       - mkdir -p {{.GOLANGCI_LINT_CACHE}}
       - task: lint:cmd
-        vars: {CLI_ARGS: "run -v --fix --timeout=5m ./..."}
+        vars: { CLI_ARGS: "run -v --fix --timeout=5m ./..." }
 
   lint:cmd:
     cmds:
@@ -61,6 +84,18 @@ tasks:
       - echo "- Tests"
       - go test -race ./...
 
+  tests:integration:
+    env:
+      TEST_LOG_LEVEL: info
+      TEST_KEYCLOAK_REALM: Bank
+      TEST_KEYCLOAK_CLIENT_ID: integration-testing
+      TEST_KEYCLOAK_CLIENT_SECRET: bAsBxAavMvxX4SeFx0g0yBarS8KPxYm7
+      TEST_KEYCLOAK_TEST_USER: integration-testing
+      TEST_KEYCLOAK_TEST_PASSWORD: integration-testing
+    cmds:
+      - echo "- Integration tests"
+      - go test -tags integration -count 1 -race ./...
+
   build:
     cmds:
       - echo "- Build"
@@ -70,9 +105,70 @@ tasks:
   generate:
     - echo "Run go generate..."
     - go generate ./...
+    - task: gen:types
+    - task: ent:gen
 
   dev-tools:install:
     cmds:
       - echo "- Install dev tools"
       - for: { var: DEV_TOOLS }
         cmd: go install {{.ITEM}}
+
+  deps:
+    cmds:
+      - "{{.DOCKER_COMPOSE_CMD}} up -d"
+
+  deps:cmd:
+    cmds:
+      - "{{.DOCKER_COMPOSE_CMD}} {{.CLI_ARGS}}"
+
+  deps:status:
+    cmds:
+      - "{{.DOCKER_COMPOSE_CMD}} ps"
+
+  deps:logs:
+    cmds:
+      - "{{.DOCKER_COMPOSE_CMD}} logs"
+
+  deps:stop:
+    cmds:
+      - "{{.DOCKER_COMPOSE_CMD}} stop"
+
+  deps:reset-psql:
+    cmds:
+      - task: deps:reset
+        vars:
+          SERVICE: postgres
+
+  deps:reset:
+    cmds:
+      - "{{.DOCKER_COMPOSE_CMD}} rm -fsv {{.SERVICE}}"
+      - "{{.DOCKER_COMPOSE_CMD}} up -d {{.SERVICE}}"
+
+  gen:types:
+    cmds:
+      - echo "Generate types..."
+      - go run ./cmd/gen-types types {{.TYPES | splitArgs | join ","}} ./internal/types/types.gen.go
+
+  ent:new:
+    cmds:
+      - ent new --target {{.ENT_SCHEMA}} {{.CLI_ARGS}}
+      - task: tidy
+
+  ent:gen:
+    cmds:
+      - ent generate {{.ENT_SCHEMA}}
+      - task: tidy
+
+  kc:export:
+    cmds:
+      - echo "Dump Keycloak Bank realm..."
+      - "{{.DOCKER_COMPOSE_CMD}} exec keycloak /opt/keycloak/bin/kc.sh export --file /tmp/realm.json --realm Bank"
+      - echo "Exported in ./deploy/local/bank-realm.json"
+      - "{{.DOCKER_COMPOSE_CMD}} cp keycloak:/tmp/realm.json ./deploy/local/bank-realm.json"
+
+  gen:api:
+    cmds:
+      - echo "Generate client server..."
+      - oapi-codegen --old-config-style -generate types,server,spec -package {{.CLIENT_V1_PKG}} {{.CLIENT_V1_SRC}} > {{.CLIENT_V1_DST}}
+      - task: tidy

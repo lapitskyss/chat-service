@@ -9,12 +9,13 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/lapitskyss/chat-service/internal/buildinfo"
 	"github.com/lapitskyss/chat-service/internal/logger"
+	"github.com/lapitskyss/chat-service/internal/middlewares"
+	clientv1 "github.com/lapitskyss/chat-service/internal/server-client/v1"
 )
 
 const (
@@ -37,11 +38,14 @@ func New(opts Options) (*Server, error) {
 		return nil, fmt.Errorf("validate options: %v", err)
 	}
 
+	lg := serverLogger()
+
 	e := echo.New()
-	e.Use(middleware.Recover())
+	e.Use(middlewares.Recover(lg))
+	e.Use(middlewares.Logger(lg))
 
 	s := &Server{
-		lg: serverLogger(),
+		lg: lg,
 		srv: &http.Server{
 			Addr:              opts.addr,
 			Handler:           e,
@@ -53,6 +57,8 @@ func New(opts Options) (*Server, error) {
 	index.addPage("/version", "Get build information")
 	index.addPage("/debug/pprof/", "Go std profiler")
 	index.addPage("/debug/pprof/profile?seconds=30", "Take half-min profile")
+	index.addPage("/debug/error", "Debug Sentry error event")
+	index.addPage("/schema/client", "Get client OpenAPI specification")
 
 	e.GET("/", index.handler)
 	e.GET("/version", s.Version)
@@ -67,6 +73,8 @@ func New(opts Options) (*Server, error) {
 		e.GET("/debug/pprof/*", echo.WrapHandler(pprofMux))
 	}
 	e.PUT("/log/level", echo.WrapHandler(logger.Level))
+	e.GET("/debug/error", s.DebugError)
+	e.GET("/schema/client", s.ClientSchema)
 
 	return s, nil
 }
@@ -101,4 +109,17 @@ func (s *Server) Run(ctx context.Context) error {
 
 func (s *Server) Version(c echo.Context) error {
 	return c.JSON(http.StatusOK, buildinfo.BuildInfo)
+}
+
+func (s *Server) DebugError(c echo.Context) error {
+	s.lg.Error("look for me in the Sentry")
+	return c.String(http.StatusOK, "event send")
+}
+
+func (s *Server) ClientSchema(c echo.Context) error {
+	swagger, err := clientv1.GetSwagger()
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, swagger)
 }
