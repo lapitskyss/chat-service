@@ -4,6 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
 
 	"github.com/lapitskyss/chat-service/internal/types"
 )
@@ -46,5 +47,11 @@ func (Message) Edges() []ent.Edge {
 			Ref("messages").
 			Field("problem_id").
 			Required().Unique(),
+	}
+}
+
+func (Message) Indexes() []ent.Index {
+	return []ent.Index{
+		index.Fields("created_at"),
 	}
 }
