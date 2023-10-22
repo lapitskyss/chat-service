@@ -35,6 +35,7 @@ vars:
   DOCKER_COMPOSE_CMD: docker compose {{range .DOCKER_COMPOSE_PATHS | splitArgs }} -f {{.}} {{end}}
 
   ENT_SCHEMA: ./internal/store/schema
+  ENT_TEMPLATES: ./internal/store/templates/database.tmpl
 
   CLIENT_V1_SRC: ./api/client.v1.swagger.yml
   CLIENT_V1_DST: ./internal/server-client/v1/server.gen.go
@@ -86,6 +87,9 @@ tasks:
 
   tests:integration:
     env:
+      TEST_PSQL_USER: chat-service
+      TEST_PSQL_PASSWORD: chat-service
+      TEST_PSQL_DEBUG: true
       TEST_LOG_LEVEL: info
       TEST_KEYCLOAK_REALM: Bank
       TEST_KEYCLOAK_CLIENT_ID: integration-testing
@@ -157,7 +161,7 @@ tasks:
 
   ent:gen:
     cmds:
-      - ent generate {{.ENT_SCHEMA}}
+      - ent generate {{.ENT_SCHEMA}} --template {{.ENT_TEMPLATES}}
       - task: tidy
 
   kc:export:
