@@ -66,7 +66,7 @@ func (r *Repo) GetClientChatMessages(
 
 func validateGetClientChatMessages(pageSize int, cursor *Cursor) (int, time.Time, error) {
 	if cursor != nil {
-		if !isPageSizeValid(pageSize) {
+		if !isPageSizeValid(cursor.PageSize) {
 			return 0, time.Time{}, ErrInvalidCursor
 		}
 		if cursor.LastCreatedAt.IsZero() {

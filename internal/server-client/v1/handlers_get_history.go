@@ -1,31 +1,63 @@
 package clientv1
 
 import (
-	"net/http"
-	"time"
+	"errors"
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/lapitskyss/chat-service/internal/types"
+	"github.com/lapitskyss/chat-service/internal/middlewares"
+	gethistory "github.com/lapitskyss/chat-service/internal/usecases/client/get-history"
+	"github.com/lapitskyss/chat-service/pkg/pointer"
 )
 
-var stub = MessagesPage{Messages: []Message{
-	{
-		AuthorId:  types.NewUserID(),
-		Body:      "Здравствуйте! Разберёмся.",
-		CreatedAt: time.Now(),
-		Id:        types.NewMessageID(),
-	},
-	{
-		AuthorId:  types.MustParse[types.UserID]("1c2f295c-cd7d-482d-8467-9ad3069371f0"),
-		Body:      "Привет! Не могу снять денег с карты,\nпишет 'карта заблокирована'",
-		CreatedAt: time.Now().Add(-time.Minute),
-		Id:        types.NewMessageID(),
-	},
-}}
+func (h Handlers) PostGetHistory(c echo.Context, params PostGetHistoryParams) error {
+	ctx := c.Request().Context()
+	clientID := middlewares.MustUserID(c)
 
-func (h Handlers) PostGetHistory(c echo.Context, _ PostGetHistoryParams) error {
-	return c.JSON(http.StatusOK, GetHistoryResponse{
-		Data: stub,
+	var req GetHistoryRequest
+	if err := c.Bind(&req); err != nil {
+		return err
+	}
+
+	response, err := h.getHistory.Handle(ctx, gethistory.Request{
+		ID:       params.XRequestID,
+		ClientID: clientID,
+		PageSize: pointer.Indirect(req.PageSize),
+		Cursor:   pointer.Indirect(req.Cursor),
 	})
+	if err != nil {
+		if errors.Is(err, gethistory.ErrInvalidRequest) {
+			return ErrBadRequest(err)
+		}
+		if errors.Is(err, gethistory.ErrInvalidCursor) {
+			return ErrBadRequest(err)
+		}
+		return err
+	}
+
+	return Success(c, GetHistoryResponse{
+		Data: &MessagesPage{
+			Messages: mapGetHistoryResponseMessages(response.Messages),
+			Next:     response.NextCursor,
+		},
+	})
+}
+
+func mapGetHistoryResponseMessages(messages []gethistory.Message) []Message {
+	result := make([]Message, len(messages))
+	for i, m := range messages {
+		message := Message{
+			Body:       m.Body,
+			CreatedAt:  m.CreatedAt,
+			Id:         m.ID,
+			IsBlocked:  m.IsBlocked,
+			IsReceived: m.IsReceived,
+			IsService:  m.IsService,
+		}
+		if !m.AuthorID.IsZero() {
+			message.AuthorId = pointer.Ptr(m.AuthorID)
+		}
+		result[i] = message
+	}
+	return result
 }

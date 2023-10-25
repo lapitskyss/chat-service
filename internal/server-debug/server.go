@@ -8,6 +8,7 @@ import (
 	"net/http/pprof"
 	"time"
 
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -15,7 +16,6 @@ import (
 	"github.com/lapitskyss/chat-service/internal/buildinfo"
 	"github.com/lapitskyss/chat-service/internal/logger"
 	"github.com/lapitskyss/chat-service/internal/middlewares"
-	clientv1 "github.com/lapitskyss/chat-service/internal/server-client/v1"
 )
 
 const (
@@ -25,7 +25,8 @@ const (
 
 //go:generate options-gen -out-filename=server_options.gen.go -from-struct=Options
 type Options struct {
-	addr string `option:"mandatory" validate:"required,hostname_port"`
+	addr          string      `option:"mandatory" validate:"required,hostname_port"`
+	clientSwagger *openapi3.T `option:"mandatory" validate:"required"`
 }
 
 type Server struct {
@@ -74,7 +75,7 @@ func New(opts Options) (*Server, error) {
 	}
 	e.PUT("/log/level", echo.WrapHandler(logger.Level))
 	e.GET("/debug/error", s.DebugError)
-	e.GET("/schema/client", s.ClientSchema)
+	e.GET("/schema/client", s.ExposeSchema(opts.clientSwagger))
 
 	return s, nil
 }
@@ -116,10 +117,8 @@ func (s *Server) DebugError(c echo.Context) error {
 	return c.String(http.StatusOK, "event send")
 }
 
-func (s *Server) ClientSchema(c echo.Context) error {
-	swagger, err := clientv1.GetSwagger()
-	if err != nil {
-		return err
+func (s *Server) ExposeSchema(swagger *openapi3.T) echo.HandlerFunc {
+	return func(eCtx echo.Context) error {
+		return eCtx.JSON(http.StatusOK, swagger)
 	}
-	return c.JSON(http.StatusOK, swagger)
 }

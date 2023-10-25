@@ -15,16 +15,6 @@ type Request struct {
 	Cursor   string          `validate:"omitempty,base64url"`
 }
 
-func (r Request) Validate() error {
-	if r.PageSize == 0 && r.Cursor == "" {
-		return ErrInvalidRequest
-	}
-	if r.PageSize != 0 && r.Cursor != "" {
-		return ErrInvalidRequest
-	}
-	return validator.Validator.Struct(r)
-}
-
 type Response struct {
 	Messages   []Message
 	NextCursor string
@@ -54,4 +44,14 @@ func mapMassages(messages []messagesrepo.Message) []Message {
 		}
 	}
 	return result
+}
+
+func (r Request) Validate() error {
+	if r.PageSize == 0 && r.Cursor == "" {
+		return ErrInvalidRequest
+	}
+	if r.PageSize != 0 && r.Cursor != "" {
+		return ErrInvalidRequest
+	}
+	return validator.Validator.Struct(r)
 }

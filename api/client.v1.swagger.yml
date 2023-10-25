@@ -45,11 +45,29 @@ components:
         type: string
         format: uuid
         x-go-type: types.RequestID
-        x-go-import:
+        x-go-type-import:
           path: "github.com/lapitskyss/chat-service/internal/types"
       required: true
 
   schemas:
+    # Common.
+
+    Error:
+      required: [ message, code ]
+      properties:
+        code:
+          $ref: "#/components/schemas/ErrorCode"
+        message:
+          type: string
+        details:
+          type: string
+
+    ErrorCode:
+      type: integer
+      description: contains HTTP error codes and specific business logic error codes (the last must be >= 1000).
+      # TODO: Конкретные коды появятся в следующем уроке.
+      minimum: 400
+
     # /getHistory
 
     GetHistoryRequest:
@@ -62,20 +80,23 @@ components:
           type: string
 
     GetHistoryResponse:
-      required: [ data ]
       properties:
         data:
           $ref: "#/components/schemas/MessagesPage"
+        error:
+          $ref: "#/components/schemas/Error"
 
     MessagesPage:
-      required: [ messages ]
+      required: [ messages, next ]
       properties:
         messages:
           type: array
           items: { $ref: "#/components/schemas/Message" }
+        next:
+          type: string
 
     Message:
-      required: [ id, authorId, body, createdAt ]
+      required: [ id, body, createdAt, isReceived, isBlocked, isService ]
       properties:
         id:
           type: string
@@ -94,3 +115,9 @@ components:
         createdAt:
           type: string
           format: date-time
+        isReceived:
+          type: boolean
+        isBlocked:
+          type: boolean
+        isService:
+          type: boolean

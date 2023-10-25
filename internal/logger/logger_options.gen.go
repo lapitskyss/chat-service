@@ -26,22 +26,29 @@ func NewOptions(
 	return o
 }
 
-func WithSentryDNS(opt string) OptOptionsSetter {
-	return func(o *Options) {
-		o.sentryDNS = opt
-	}
-}
-
 func WithProductionMode(opt bool) OptOptionsSetter {
 	return func(o *Options) {
 		o.productionMode = opt
 	}
 }
 
+func WithSentryDSN(opt string) OptOptionsSetter {
+	return func(o *Options) {
+		o.sentryDSN = opt
+	}
+}
+
+func WithSentryEnv(opt string) OptOptionsSetter {
+	return func(o *Options) {
+		o.sentryEnv = opt
+	}
+}
+
 func (o *Options) Validate() error {
 	errs := new(errors461e464ebed9.ValidationErrors)
 	errs.Add(errors461e464ebed9.NewValidationError("level", _validate_Options_level(o)))
-	errs.Add(errors461e464ebed9.NewValidationError("sentryDNS", _validate_Options_sentryDNS(o)))
+	errs.Add(errors461e464ebed9.NewValidationError("sentryDSN", _validate_Options_sentryDSN(o)))
+	errs.Add(errors461e464ebed9.NewValidationError("sentryEnv", _validate_Options_sentryEnv(o)))
 	return errs.AsError()
 }
 
@@ -52,9 +59,16 @@ func _validate_Options_level(o *Options) error {
 	return nil
 }
 
-func _validate_Options_sentryDNS(o *Options) error {
-	if err := validator461e464ebed9.GetValidatorFor(o).Var(o.sentryDNS, "omitempty,url"); err != nil {
-		return fmt461e464ebed9.Errorf("field `sentryDNS` did not pass the test: %w", err)
+func _validate_Options_sentryDSN(o *Options) error {
+	if err := validator461e464ebed9.GetValidatorFor(o).Var(o.sentryDSN, "omitempty,url"); err != nil {
+		return fmt461e464ebed9.Errorf("field `sentryDSN` did not pass the test: %w", err)
+	}
+	return nil
+}
+
+func _validate_Options_sentryEnv(o *Options) error {
+	if err := validator461e464ebed9.GetValidatorFor(o).Var(o.sentryEnv, "omitempty,oneof=dev stage prod"); err != nil {
+		return fmt461e464ebed9.Errorf("field `sentryEnv` did not pass the test: %w", err)
 	}
 	return nil
 }

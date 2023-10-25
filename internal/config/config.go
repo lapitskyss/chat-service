@@ -4,6 +4,7 @@ type Config struct {
 	Global  GlobalConfig  `toml:"global"`
 	Log     LogConfig     `toml:"log"`
 	Sentry  SentryConfig  `toml:"sentry"`
+	PSQL    PSQLConfig    `toml:"psql"`
 	Servers ServersConfig `toml:"servers"`
 	Clients ClientsConfig `toml:"clients"`
 }
@@ -22,6 +23,14 @@ type LogConfig struct {
 
 type SentryConfig struct {
 	DSN string `toml:"dsn" validate:"omitempty,url"`
+}
+
+type PSQLConfig struct {
+	Address  string `toml:"address" validate:"required,hostname_port"`
+	User     string `toml:"user" validate:"required"`
+	Password string `toml:"password" validate:"required"`
+	Database string `toml:"database" validate:"required"`
+	Debug    bool   `toml:"debug"`
 }
 
 type ServersConfig struct {

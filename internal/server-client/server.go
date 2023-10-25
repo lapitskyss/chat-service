@@ -26,14 +26,15 @@ const (
 
 //go:generate options-gen -out-filename=server_options.gen.go -from-struct=Options
 type Options struct {
-	logger               *zap.Logger              `option:"mandatory" validate:"required"`
-	addr                 string                   `option:"mandatory" validate:"required,hostname_port"`
-	allowOrigins         []string                 `option:"mandatory" validate:"min=1"`
-	v1Swagger            *openapi3.T              `option:"mandatory" validate:"required"`
-	v1Handlers           clientv1.ServerInterface `option:"mandatory" validate:"required"`
-	keycloakIntrospector middlewares.Introspector `option:"mandatory" validate:"required"`
-	authResource         string                   `option:"mandatory" validate:"required"`
-	authRole             string                   `option:"mandatory" validate:"required"`
+	logger           *zap.Logger              `option:"mandatory" validate:"required"`
+	addr             string                   `option:"mandatory" validate:"required,hostname_port"`
+	allowOrigins     []string                 `option:"mandatory" validate:"min=1"`
+	introspector     middlewares.Introspector `option:"mandatory" validate:"required"`
+	requiredResource string                   `option:"mandatory" validate:"required"`
+	requiredRole     string                   `option:"mandatory" validate:"required"`
+	v1Swagger        *openapi3.T              `option:"mandatory" validate:"required"`
+	v1Handlers       clientv1.ServerInterface `option:"mandatory" validate:"required"`
+	httpErrorHandler echo.HTTPErrorHandler    `option:"mandatory" validate:"required"`
 }
 
 type Server struct {
@@ -47,6 +48,7 @@ func New(opts Options) (*Server, error) {
 	}
 
 	e := echo.New()
+	e.HTTPErrorHandler = opts.httpErrorHandler
 	e.Use(middlewares.Logger(opts.logger))
 	e.Use(middlewares.Recover(opts.logger))
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
@@ -54,7 +56,7 @@ func New(opts Options) (*Server, error) {
 		AllowMethods: []string{http.MethodPost},
 	}))
 	e.Use(middleware.BodyLimit("12K")) // 3000 characters * 4 байт
-	e.Use(middlewares.NewKeycloakTokenAuth(opts.keycloakIntrospector, opts.authResource, opts.authRole))
+	e.Use(middlewares.NewKeycloakTokenAuth(opts.introspector, opts.requiredResource, opts.requiredRole))
 
 	v1 := e.Group("v1", oapimdlwr.OapiRequestValidatorWithOptions(opts.v1Swagger, &oapimdlwr.Options{
 		Options: openapi3filter.Options{
