@@ -3,6 +3,7 @@ package messagesrepo
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -50,7 +51,7 @@ func (r *Repo) GetClientChatMessages(
 
 	msgs, err := query.All(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("get client chat messags: %v", err)
 	}
 
 	if len(msgs) == limit {

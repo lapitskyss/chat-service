@@ -7,11 +7,15 @@ import (
 	"go.uber.org/zap"
 
 	keycloakclient "github.com/lapitskyss/chat-service/internal/clients/keycloak"
+	chatsrepo "github.com/lapitskyss/chat-service/internal/repositories/chats"
 	messagesrepo "github.com/lapitskyss/chat-service/internal/repositories/messages"
+	problemsrepo "github.com/lapitskyss/chat-service/internal/repositories/problems"
 	serverclient "github.com/lapitskyss/chat-service/internal/server-client"
 	"github.com/lapitskyss/chat-service/internal/server-client/errhandler"
 	clientv1 "github.com/lapitskyss/chat-service/internal/server-client/v1"
+	"github.com/lapitskyss/chat-service/internal/store"
 	gethistory "github.com/lapitskyss/chat-service/internal/usecases/client/get-history"
+	sendmessage "github.com/lapitskyss/chat-service/internal/usecases/client/send-message"
 )
 
 const nameServerClient = "server-client"
@@ -27,16 +31,32 @@ func initServerClient(
 	requiredResource string,
 	requiredRole string,
 
-	repo *messagesrepo.Repo,
+	db *store.Database,
+	chatRepo *chatsrepo.Repo,
+	msgRepo *messagesrepo.Repo,
+	problemRepo *problemsrepo.Repo,
 ) (*serverclient.Server, error) {
 	lg := zap.L().Named(nameServerClient)
 
-	getHistoryUseCase, err := gethistory.New(gethistory.NewOptions(repo))
+	getHistoryUseCase, err := gethistory.New(gethistory.NewOptions(msgRepo))
 	if err != nil {
 		return nil, fmt.Errorf("gethistory usecase: %v", err)
 	}
 
-	v1Handlers, err := clientv1.NewHandlers(clientv1.NewOptions(getHistoryUseCase))
+	sendMessageUseCase, err := sendmessage.New(sendmessage.NewOptions(
+		chatRepo,
+		msgRepo,
+		problemRepo,
+		db,
+	))
+	if err != nil {
+		return nil, fmt.Errorf("gethistory usecase: %v", err)
+	}
+
+	v1Handlers, err := clientv1.NewHandlers(clientv1.NewOptions(
+		getHistoryUseCase,
+		sendMessageUseCase,
+	))
 	if err != nil {
 		return nil, fmt.Errorf("create v1 handlers: %v", err)
 	}

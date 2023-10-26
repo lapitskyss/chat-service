@@ -15,7 +15,9 @@ import (
 	keycloakclient "github.com/lapitskyss/chat-service/internal/clients/keycloak"
 	"github.com/lapitskyss/chat-service/internal/config"
 	"github.com/lapitskyss/chat-service/internal/logger"
+	chatsrepo "github.com/lapitskyss/chat-service/internal/repositories/chats"
 	messagesrepo "github.com/lapitskyss/chat-service/internal/repositories/messages"
+	problemsrepo "github.com/lapitskyss/chat-service/internal/repositories/problems"
 	clientv1 "github.com/lapitskyss/chat-service/internal/server-client/v1"
 	serverdebug "github.com/lapitskyss/chat-service/internal/server-debug"
 	"github.com/lapitskyss/chat-service/internal/store"
@@ -90,9 +92,17 @@ func run() (errReturned error) {
 
 	// Repository.
 	db := store.NewDatabase(psql)
-	repo, err := messagesrepo.New(messagesrepo.NewOptions(db))
+	chatRepo, err := chatsrepo.New(chatsrepo.NewOptions(db))
 	if err != nil {
-		return fmt.Errorf("message repository: %v", err)
+		return fmt.Errorf("chats repository: %v", err)
+	}
+	msgRepo, err := messagesrepo.New(messagesrepo.NewOptions(db))
+	if err != nil {
+		return fmt.Errorf("messages repository: %v", err)
+	}
+	problemRepo, err := problemsrepo.New(problemsrepo.NewOptions(db))
+	if err != nil {
+		return fmt.Errorf("messages repository: %v", err)
 	}
 
 	// Servers.
@@ -109,7 +119,10 @@ func run() (errReturned error) {
 		kc,
 		cfg.Servers.Client.RequiredAccess.Resource,
 		cfg.Servers.Client.RequiredAccess.Role,
-		repo,
+		db,
+		chatRepo,
+		msgRepo,
+		problemRepo,
 	)
 	if err != nil {
 		return fmt.Errorf("init client server: %v", err)

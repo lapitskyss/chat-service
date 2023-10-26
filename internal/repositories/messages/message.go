@@ -21,6 +21,27 @@ type Message struct {
 	CreatedAt           time.Time
 }
 
+func newClientVisibleMessage(
+	problemID types.ProblemID,
+	chatID types.ChatID,
+	authorID types.UserID,
+	msgBody string,
+) *Message {
+	return &Message{
+		ID:                  types.NewMessageID(),
+		ChatID:              chatID,
+		ProblemID:           problemID,
+		AuthorID:            authorID,
+		IsVisibleForClient:  true,
+		IsVisibleForManager: false,
+		Body:                msgBody,
+		CheckedAt:           time.Time{},
+		IsBlocked:           false,
+		IsService:           false,
+		CreatedAt:           time.Now(),
+	}
+}
+
 func adaptStoreMessage(m *store.Message) Message {
 	return Message{
 		ID:                  m.ID,

@@ -19,6 +19,7 @@ vars:
     entgo.io/ent/cmd/ent@v0.12.4
     github.com/deepmap/oapi-codegen/cmd/oapi-codegen@v1.15.0
     go.uber.org/mock/mockgen@v0.3.0
+    github.com/onsi/ginkgo/v2/ginkgo@v2.9.1
 
   TYPES: |
     ChatID
@@ -36,10 +37,14 @@ vars:
 
   ENT_SCHEMA: ./internal/store/schema
   ENT_TEMPLATES: ./internal/store/templates/database.tmpl
+  ENT_FEATURES: sql/upsert
 
   CLIENT_V1_SRC: ./api/client.v1.swagger.yml
   CLIENT_V1_DST: ./internal/server-client/v1/server.gen.go
   CLIENT_V1_PKG: clientv1
+
+  E2E_CLIENT_V1_DST: ./tests/e2e/api/client/v1/client.gen.go
+  E2E_CLIENT_V1_PKG: apiclientv1
 
 tasks:
   default:
@@ -100,6 +105,21 @@ tasks:
       - echo "- Integration tests"
       - go test -tags integration -count 1 -race ./...
 
+  tests:e2e:
+    env:
+      E2E_CLIENT_V1_API_ENDPOINT: http://localhost:8080/v1
+
+      E2E_KEYCLOAK_BASE_PATH: http://localhost:3010
+      E2E_KEYCLOAK_REALM: Bank
+      E2E_KEYCLOAK_CLIENT_ID: e2e-testing
+      E2E_KEYCLOAK_CLIENT_SECRET: qj2cDBSGdDgQFSqFcYV0tSUAXml1dQcS
+      E2E_KEYCLOAK_CLIENT_DEBUG: false
+      E2E_KEYCLOAK_CLIENTS: e2e_client_0,e2e_client_1
+    cmds:
+      - echo "- End-to-end tests..."
+      # NOTE: It's important to run tests serial (without `-p` flag) – for correct `clientsPool` sharing.
+      - "ginkgo --fail-fast --timeout=1m --tags e2e {{.CLI_ARGS}} ./tests/e2e"
+
   build:
     cmds:
       - echo "- Build"
@@ -111,6 +131,8 @@ tasks:
     - go generate ./...
     - task: gen:types
     - task: ent:gen
+    - task: gen:api
+    - task: gen:e2e
 
   dev-tools:install:
     cmds:
@@ -149,11 +171,6 @@ tasks:
       - "{{.DOCKER_COMPOSE_CMD}} rm -fsv {{.SERVICE}}"
       - "{{.DOCKER_COMPOSE_CMD}} up -d {{.SERVICE}}"
 
-  gen:types:
-    cmds:
-      - echo "Generate types..."
-      - go run ./cmd/gen-types types {{.TYPES | splitArgs | join ","}} ./internal/types/types.gen.go
-
   ent:new:
     cmds:
       - ent new --target {{.ENT_SCHEMA}} {{.CLI_ARGS}}
@@ -161,7 +178,7 @@ tasks:
 
   ent:gen:
     cmds:
-      - ent generate {{.ENT_SCHEMA}} --template {{.ENT_TEMPLATES}}
+      - ent generate {{.ENT_SCHEMA}} --template {{.ENT_TEMPLATES}} --feature {{.ENT_FEATURES}}
       - task: tidy
 
   kc:export:
@@ -171,8 +188,18 @@ tasks:
       - echo "Exported in ./deploy/local/bank-realm.json"
       - "{{.DOCKER_COMPOSE_CMD}} cp keycloak:/tmp/realm.json ./deploy/local/bank-realm.json"
 
+  gen:types:
+    cmds:
+      - echo "Generate types..."
+      - go run ./cmd/gen-types types {{.TYPES | splitArgs | join ","}} ./internal/types/types.gen.go
+
   gen:api:
     cmds:
       - echo "Generate client server..."
       - oapi-codegen --old-config-style -generate types,server,spec -package {{.CLIENT_V1_PKG}} {{.CLIENT_V1_SRC}} > {{.CLIENT_V1_DST}}
       - task: tidy
+
+  gen:e2e:
+    cmds:
+      - echo "[E2E] Generate client API..."
+      - oapi-codegen --old-config-style -generate types,client -package {{.E2E_CLIENT_V1_PKG}} {{.CLIENT_V1_SRC}} > {{.E2E_CLIENT_V1_DST}}

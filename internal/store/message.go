@@ -26,6 +26,8 @@ type Message struct {
 	ProblemID types.ProblemID `json:"problem_id,omitempty"`
 	// AuthorID holds the value of the "author_id" field.
 	AuthorID types.UserID `json:"author_id,omitempty"`
+	// InitialRequestID holds the value of the "initial_request_id" field.
+	InitialRequestID types.RequestID `json:"initial_request_id,omitempty"`
 	// IsVisibleForClient holds the value of the "is_visible_for_client" field.
 	IsVisibleForClient bool `json:"is_visible_for_client,omitempty"`
 	// IsVisibleForManager holds the value of the "is_visible_for_manager" field.
@@ -100,6 +102,8 @@ func (*Message) scanValues(columns []string) ([]any, error) {
 			values[i] = new(types.MessageID)
 		case message.FieldProblemID:
 			values[i] = new(types.ProblemID)
+		case message.FieldInitialRequestID:
+			values[i] = new(types.RequestID)
 		case message.FieldAuthorID:
 			values[i] = new(types.UserID)
 		default:
@@ -140,6 +144,12 @@ func (m *Message) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field author_id", values[i])
 			} else if value != nil {
 				m.AuthorID = *value
+			}
+		case message.FieldInitialRequestID:
+			if value, ok := values[i].(*types.RequestID); !ok {
+				return fmt.Errorf("unexpected type %T for field initial_request_id", values[i])
+			} else if value != nil {
+				m.InitialRequestID = *value
 			}
 		case message.FieldIsVisibleForClient:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -237,6 +247,9 @@ func (m *Message) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("author_id=")
 	builder.WriteString(fmt.Sprintf("%v", m.AuthorID))
+	builder.WriteString(", ")
+	builder.WriteString("initial_request_id=")
+	builder.WriteString(fmt.Sprintf("%v", m.InitialRequestID))
 	builder.WriteString(", ")
 	builder.WriteString("is_visible_for_client=")
 	builder.WriteString(fmt.Sprintf("%v", m.IsVisibleForClient))
