@@ -2,6 +2,7 @@ package clientv1
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/labstack/echo/v4"
 
@@ -16,7 +17,7 @@ func (h Handlers) PostSendMessage(c echo.Context, params PostSendMessageParams) 
 
 	var req SendMessageRequest
 	if err := c.Bind(&req); err != nil {
-		return err
+		return fmt.Errorf("bind request: %w", err)
 	}
 
 	response, err := h.sendMessage.Handle(ctx, sendmessage.Request{
@@ -29,10 +30,10 @@ func (h Handlers) PostSendMessage(c echo.Context, params PostSendMessageParams) 
 			return ErrBadRequest(err)
 		}
 		if errors.Is(err, sendmessage.ErrChatNotCreated) {
-			return ErrServer(ErrorCodeCreateChatError, err)
+			return ErrServer(ErrorCodeCreateChatError, "create chat error", err)
 		}
 		if errors.Is(err, sendmessage.ErrProblemNotCreated) {
-			return ErrServer(ErrorCodeCreateProblemError, err)
+			return ErrServer(ErrorCodeCreateProblemError, "problem not created", err)
 		}
 		return err
 	}

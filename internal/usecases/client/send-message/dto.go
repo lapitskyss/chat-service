@@ -10,7 +10,7 @@ import (
 type Request struct {
 	ID          types.RequestID `validate:"required"`
 	ClientID    types.UserID    `validate:"required"`
-	MessageBody string          `validate:"required,gte=1,lte=3000"`
+	MessageBody string          `validate:"required,min=1,max=3000"`
 }
 
 func (r Request) Validate() error {

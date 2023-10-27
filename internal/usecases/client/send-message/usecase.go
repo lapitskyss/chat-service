@@ -70,7 +70,7 @@ func (u UseCase) Handle(ctx context.Context, req Request) (Response, error) {
 	err := u.tr.RunInTx(ctx, func(ctx context.Context) error {
 		var err error
 		msg, err = u.msgRepo.GetMessageByRequestID(ctx, req.ID)
-		if err == nil {
+		if nil == err {
 			return nil
 		}
 		if err != nil && !errors.Is(err, messagesrepo.ErrMsgNotFound) {

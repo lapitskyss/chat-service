@@ -47,6 +47,6 @@ func ErrBadRequest(data any) error {
 	return echo.NewHTTPError(http.StatusBadRequest, data)
 }
 
-func ErrServer(code ErrorCode, err error) error {
-	return svcerr.NewServerError(int(code), "", err)
+func ErrServer(code ErrorCode, msg string, err error) error {
+	return svcerr.NewServerError(int(code), msg, err)
 }

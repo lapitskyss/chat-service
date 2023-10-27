@@ -2,6 +2,7 @@ package clientv1
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/labstack/echo/v4"
 
@@ -16,7 +17,7 @@ func (h Handlers) PostGetHistory(c echo.Context, params PostGetHistoryParams) er
 
 	var req GetHistoryRequest
 	if err := c.Bind(&req); err != nil {
-		return err
+		return fmt.Errorf("bind request: %w", err)
 	}
 
 	response, err := h.getHistory.Handle(ctx, gethistory.Request{

@@ -36,19 +36,18 @@ func (r *Repo) CreateClientVisible(
 	authorID types.UserID,
 	msgBody string,
 ) (*Message, error) {
-	msg := newClientVisibleMessage(problemID, chatID, authorID, msgBody)
+	msg := newClientVisibleMessage(chatID, authorID, msgBody)
 
 	err := r.db.Message(ctx).
 		Create().
 		SetID(msg.ID).
 		SetChatID(msg.ChatID).
-		SetProblemID(msg.ProblemID).
+		SetProblemID(problemID).
 		SetAuthorID(msg.AuthorID).
 		SetInitialRequestID(reqID).
 		SetIsVisibleForClient(msg.IsVisibleForClient).
 		SetIsVisibleForManager(msg.IsVisibleForManager).
 		SetBody(msg.Body).
-		SetCheckedAt(msg.CheckedAt).
 		SetIsBlocked(msg.IsBlocked).
 		SetIsService(msg.IsService).
 		SetCreatedAt(msg.CreatedAt).
