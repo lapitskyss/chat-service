@@ -188,6 +188,7 @@ func (s *MsgRepoHistoryAPISuite) createMessages(
 		op := s.Database.Message(s.Ctx).Create().
 			SetChatID(chatID).
 			SetProblemID(problemID).
+			SetInitialRequestID(types.NewRequestID()).
 			SetIsVisibleForClient(visibleForClient).
 			SetIsVisibleForManager(visibleForManager).
 			SetIsService(isService).

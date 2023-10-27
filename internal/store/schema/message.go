@@ -23,7 +23,7 @@ func (Message) Fields() []ent.Field {
 		field.UUID("chat_id", types.ChatID{}),
 		field.UUID("problem_id", types.ProblemID{}),
 		field.UUID("author_id", types.UserID{}).Optional().Immutable(),
-		field.UUID("initial_request_id", types.RequestID{}).Immutable(),
+		field.UUID("initial_request_id", types.RequestID{}).Unique().Immutable(),
 		field.Bool("is_visible_for_client").Default(false),
 		field.Bool("is_visible_for_manager").Default(false),
 		field.Text("body").NotEmpty().MaxLen(messageBodyMaxLength).Immutable(),
@@ -53,7 +53,6 @@ func (Message) Edges() []ent.Edge {
 
 func (Message) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("initial_request_id").Unique(),
 		index.Fields("created_at"),
 	}
 }
