@@ -62,7 +62,7 @@ func New(opts Options) (UseCase, error) {
 
 func (u UseCase) Handle(ctx context.Context, req Request) (Response, error) {
 	if err := req.Validate(); err != nil {
-		return Response{}, ErrInvalidRequest
+		return Response{}, fmt.Errorf("validate request: %w: %v", ErrInvalidRequest, err)
 	}
 
 	var msg *messagesrepo.Message
@@ -91,7 +91,7 @@ func (u UseCase) Handle(ctx context.Context, req Request) (Response, error) {
 		return nil
 	})
 	if err != nil {
-		return Response{}, err
+		return Response{}, fmt.Errorf("`send client message` tx: %w", err)
 	}
 
 	return Response{

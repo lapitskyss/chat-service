@@ -33,17 +33,16 @@ func (r *Repo) GetClientChatMessages(
 ) ([]Message, *Cursor, error) {
 	pageSize, createdFrom, err := validateGetClientChatMessages(pageSize, cursor)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("validate request: %w", err)
 	}
-
-	limit := pageSize + 1
 
 	query := r.db.Message(ctx).
 		Query().
+		Unique(false).
 		Where(message.HasChatWith(chat.ClientID(clientID))).
 		Where(message.IsVisibleForClient(true)).
 		Order(message.ByCreatedAt(sql.OrderDesc())).
-		Limit(limit)
+		Limit(pageSize + 1)
 
 	if !createdFrom.IsZero() {
 		query = query.Where(message.CreatedAtLT(createdFrom))
@@ -54,15 +53,15 @@ func (r *Repo) GetClientChatMessages(
 		return nil, nil, fmt.Errorf("get client chat messags: %v", err)
 	}
 
-	if len(msgs) == limit {
-		c := &Cursor{
-			LastCreatedAt: msgs[len(msgs)-2].CreatedAt,
-			PageSize:      pageSize,
-		}
-		return adaptStoreMessages(msgs[:len(msgs)-1]), c, nil
+	if len(msgs) <= pageSize {
+		return adaptStoreMessages(msgs), nil, nil
 	}
 
-	return adaptStoreMessages(msgs), nil, nil
+	c := &Cursor{
+		LastCreatedAt: msgs[len(msgs)-2].CreatedAt,
+		PageSize:      pageSize,
+	}
+	return adaptStoreMessages(msgs[:len(msgs)-1]), c, nil
 }
 
 func validateGetClientChatMessages(pageSize int, cursor *Cursor) (int, time.Time, error) {

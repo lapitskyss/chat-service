@@ -1,6 +1,7 @@
 package gethistory
 
 import (
+	"errors"
 	"time"
 
 	messagesrepo "github.com/lapitskyss/chat-service/internal/repositories/messages"
@@ -47,11 +48,11 @@ func mapMassages(messages []messagesrepo.Message) []Message {
 }
 
 func (r Request) Validate() error {
-	if r.PageSize == 0 && r.Cursor == "" {
-		return ErrInvalidRequest
+	if r.Cursor == "" && r.PageSize == 0 {
+		return errors.New("either cursor or page size must be specified")
 	}
-	if r.PageSize != 0 && r.Cursor != "" {
-		return ErrInvalidRequest
+	if r.Cursor != "" && r.PageSize != 0 {
+		return errors.New("either cursor or page size must be specified, not both")
 	}
 	return validator.Validator.Struct(r)
 }

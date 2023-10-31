@@ -3,6 +3,7 @@
 package migrate
 
 import (
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/dialect/sql/schema"
 	"entgo.io/ent/schema/field"
 )
@@ -59,6 +60,12 @@ var (
 				Name:    "message_created_at",
 				Unique:  false,
 				Columns: []*schema.Column{MessagesColumns[9]},
+				Annotation: &entsql.IndexAnnotation{
+					DescColumns: map[string]bool{
+						MessagesColumns[9].Name: true,
+					},
+					Type: "BTREE",
+				},
 			},
 		},
 	}

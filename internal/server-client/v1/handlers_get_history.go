@@ -28,12 +28,12 @@ func (h Handlers) PostGetHistory(c echo.Context, params PostGetHistoryParams) er
 	})
 	if err != nil {
 		if errors.Is(err, gethistory.ErrInvalidRequest) {
-			return ErrBadRequest(err)
+			return ErrBadRequest("invalid request", err)
 		}
 		if errors.Is(err, gethistory.ErrInvalidCursor) {
-			return ErrBadRequest(err)
+			return ErrBadRequest("invalid cursor", err)
 		}
-		return err
+		return fmt.Errorf("handle `get history` use case: %v", err)
 	}
 
 	return Success(c, GetHistoryResponse{

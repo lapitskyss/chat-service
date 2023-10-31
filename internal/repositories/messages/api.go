@@ -15,11 +15,12 @@ var ErrMsgNotFound = errors.New("message not found")
 func (r *Repo) GetMessageByRequestID(ctx context.Context, reqID types.RequestID) (*Message, error) {
 	m, err := r.db.Message(ctx).
 		Query().
+		Unique(false).
 		Where(message.InitialRequestID(reqID)).
 		Only(ctx)
 	if err != nil {
 		if store.IsNotFound(err) {
-			return nil, ErrMsgNotFound
+			return nil, fmt.Errorf("request id %v: %w", reqID, ErrMsgNotFound)
 		}
 		return nil, fmt.Errorf("get message by request id: %v", err)
 	}
@@ -36,24 +37,19 @@ func (r *Repo) CreateClientVisible(
 	authorID types.UserID,
 	msgBody string,
 ) (*Message, error) {
-	msg := newClientVisibleMessage(chatID, authorID, msgBody)
-
-	err := r.db.Message(ctx).
-		Create().
-		SetID(msg.ID).
-		SetChatID(msg.ChatID).
+	m, err := r.db.Message(ctx).Create().
+		SetChatID(chatID).
 		SetProblemID(problemID).
-		SetAuthorID(msg.AuthorID).
+		SetAuthorID(authorID).
+		SetIsVisibleForClient(true).
+		SetIsVisibleForManager(false).
+		SetBody(msgBody).
 		SetInitialRequestID(reqID).
-		SetIsVisibleForClient(msg.IsVisibleForClient).
-		SetIsVisibleForManager(msg.IsVisibleForManager).
-		SetBody(msg.Body).
-		SetIsBlocked(msg.IsBlocked).
-		SetIsService(msg.IsService).
-		SetCreatedAt(msg.CreatedAt).
-		Exec(ctx)
+		Save(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("create message client visible: %v", err)
+		return nil, fmt.Errorf("create msg: %v", err)
 	}
-	return msg, nil
+
+	mm := adaptStoreMessage(m)
+	return &mm, nil
 }

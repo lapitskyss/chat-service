@@ -27,15 +27,15 @@ func (h Handlers) PostSendMessage(c echo.Context, params PostSendMessageParams) 
 	})
 	if err != nil {
 		if errors.Is(err, sendmessage.ErrInvalidRequest) {
-			return ErrBadRequest(err)
+			return ErrBadRequest("invalid request", err)
 		}
 		if errors.Is(err, sendmessage.ErrChatNotCreated) {
 			return ErrServer(ErrorCodeCreateChatError, "create chat error", err)
 		}
 		if errors.Is(err, sendmessage.ErrProblemNotCreated) {
-			return ErrServer(ErrorCodeCreateProblemError, "problem not created", err)
+			return ErrServer(ErrorCodeCreateProblemError, "create problem error", err)
 		}
-		return err
+		return fmt.Errorf("handle `send message` use case: %v", err)
 	}
 
 	return Success(c, SendMessageResponse{

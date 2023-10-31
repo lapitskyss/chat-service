@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"go.uber.org/multierr"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
@@ -68,7 +69,7 @@ func run() (errReturned error) {
 	}
 
 	// Postgres.
-	psql, err := store.NewPSQLClient(store.NewPSQLOptions(
+	storage, err := store.NewPSQLClient(store.NewPSQLOptions(
 		cfg.PSQL.Address,
 		cfg.PSQL.User,
 		cfg.PSQL.Password,
@@ -82,16 +83,16 @@ func run() (errReturned error) {
 		zap.L().Warn("psql client in the debug mode")
 	}
 
-	defer psql.Close()
+	defer multierr.AppendInvoke(&errReturned, multierr.Close(storage))
 
 	// Migration.
-	err = psql.Schema.Create(ctx)
+	err = storage.Schema.Create(ctx)
 	if err != nil {
 		return fmt.Errorf("auto migration: %v", err)
 	}
 
 	// Repository.
-	db := store.NewDatabase(psql)
+	db := store.NewDatabase(storage)
 	chatRepo, err := chatsrepo.New(chatsrepo.NewOptions(db))
 	if err != nil {
 		return fmt.Errorf("chats repository: %v", err)

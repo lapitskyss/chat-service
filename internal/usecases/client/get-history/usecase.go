@@ -44,20 +44,20 @@ func New(opts Options) (UseCase, error) {
 
 func (u UseCase) Handle(ctx context.Context, req Request) (Response, error) {
 	if err := req.Validate(); err != nil {
-		return Response{}, ErrInvalidRequest
+		return Response{}, fmt.Errorf("validate request: %w: %v", ErrInvalidRequest, err)
 	}
 
 	cur, err := decodeCursor(req.Cursor)
 	if err != nil {
-		return Response{}, ErrInvalidCursor
+		return Response{}, fmt.Errorf("decode cursor: %w: %v", ErrInvalidCursor, err)
 	}
 
 	messages, cur, err := u.msgRepo.GetClientChatMessages(ctx, req.ClientID, req.PageSize, cur)
 	if err != nil {
 		if errors.Is(err, messagesrepo.ErrInvalidCursor) {
-			return Response{}, ErrInvalidCursor
+			return Response{}, fmt.Errorf("get client chat messages: %w: %v", ErrInvalidCursor, err)
 		}
-		return Response{}, fmt.Errorf("repo get client chat messages: %v", err)
+		return Response{}, fmt.Errorf("get client chat messages: %v", err)
 	}
 
 	nextCursor, err := encodeCursor(cur)

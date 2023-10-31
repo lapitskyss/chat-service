@@ -43,8 +43,8 @@ func Success(c echo.Context, data any) error {
 	return c.JSON(http.StatusOK, data)
 }
 
-func ErrBadRequest(data any) error {
-	return echo.NewHTTPError(http.StatusBadRequest, data)
+func ErrBadRequest(msg string, err error) error {
+	return svcerr.NewServerError(http.StatusBadRequest, msg, err)
 }
 
 func ErrServer(code ErrorCode, msg string, err error) error {

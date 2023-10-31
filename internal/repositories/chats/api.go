@@ -11,10 +11,9 @@ import (
 func (r *Repo) CreateIfNotExists(ctx context.Context, userID types.UserID) (types.ChatID, error) {
 	chatID, err := r.db.Chat(ctx).
 		Create().
-		SetID(types.NewChatID()).
 		SetClientID(userID).
 		OnConflictColumns(chat.FieldClientID).
-		UpdateNewValues().
+		Ignore().
 		ID(ctx)
 	if err != nil {
 		return types.ChatID{}, fmt.Errorf("create chat: %v", err)
