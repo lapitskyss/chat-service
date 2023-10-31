@@ -2,6 +2,7 @@ run:
   tests: true
   build-tags:
     - integration
+    - e2e
   skip-dirs:
     - internal/store/*
 

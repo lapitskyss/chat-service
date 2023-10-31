@@ -24,6 +24,23 @@ const (
 	BearerAuthScopes = "bearerAuth.Scopes"
 )
 
+// Defines values for ErrorCode.
+const (
+	ErrorCodeCreateChatError    ErrorCode = 1000
+	ErrorCodeCreateProblemError ErrorCode = 1001
+)
+
+// Error defines model for Error.
+type Error struct {
+	// Code contains HTTP error codes and specific business logic error codes (the last must be >= 1000).
+	Code    ErrorCode `json:"code"`
+	Details *string   `json:"details,omitempty"`
+	Message string    `json:"message"`
+}
+
+// ErrorCode contains HTTP error codes and specific business logic error codes (the last must be >= 1000).
+type ErrorCode int
+
 // GetHistoryRequest defines model for GetHistoryRequest.
 type GetHistoryRequest struct {
 	Cursor   *string `json:"cursor,omitempty"`
@@ -32,13 +49,24 @@ type GetHistoryRequest struct {
 
 // GetHistoryResponse defines model for GetHistoryResponse.
 type GetHistoryResponse struct {
-	Data MessagesPage `json:"data"`
+	Data  *MessagesPage `json:"data,omitempty"`
+	Error *Error        `json:"error,omitempty"`
 }
 
 // Message defines model for Message.
 type Message struct {
-	AuthorId  types.UserID    `json:"authorId"`
-	Body      string          `json:"body"`
+	AuthorId   *types.UserID   `json:"authorId,omitempty"`
+	Body       string          `json:"body"`
+	CreatedAt  time.Time       `json:"createdAt"`
+	Id         types.MessageID `json:"id"`
+	IsBlocked  bool            `json:"isBlocked"`
+	IsReceived bool            `json:"isReceived"`
+	IsService  bool            `json:"isService"`
+}
+
+// MessageHeader defines model for MessageHeader.
+type MessageHeader struct {
+	AuthorId  *types.UserID   `json:"authorId,omitempty"`
 	CreatedAt time.Time       `json:"createdAt"`
 	Id        types.MessageID `json:"id"`
 }
@@ -46,6 +74,18 @@ type Message struct {
 // MessagesPage defines model for MessagesPage.
 type MessagesPage struct {
 	Messages []Message `json:"messages"`
+	Next     string    `json:"next"`
+}
+
+// SendMessageRequest defines model for SendMessageRequest.
+type SendMessageRequest struct {
+	MessageBody string `json:"messageBody"`
+}
+
+// SendMessageResponse defines model for SendMessageResponse.
+type SendMessageResponse struct {
+	Data  *MessageHeader `json:"data,omitempty"`
+	Error *Error         `json:"error,omitempty"`
 }
 
 // XRequestIDHeader defines model for XRequestIDHeader.
@@ -56,14 +96,25 @@ type PostGetHistoryParams struct {
 	XRequestID XRequestIDHeader `json:"X-Request-ID"`
 }
 
+// PostSendMessageParams defines parameters for PostSendMessage.
+type PostSendMessageParams struct {
+	XRequestID XRequestIDHeader `json:"X-Request-ID"`
+}
+
 // PostGetHistoryJSONRequestBody defines body for PostGetHistory for application/json ContentType.
 type PostGetHistoryJSONRequestBody = GetHistoryRequest
+
+// PostSendMessageJSONRequestBody defines body for PostSendMessage for application/json ContentType.
+type PostSendMessageJSONRequestBody = SendMessageRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 
 	// (POST /getHistory)
 	PostGetHistory(ctx echo.Context, params PostGetHistoryParams) error
+
+	// (POST /sendMessage)
+	PostSendMessage(ctx echo.Context, params PostSendMessageParams) error
 }
 
 // ServerInterfaceWrapper converts echo contexts to parameters.
@@ -104,6 +155,39 @@ func (w *ServerInterfaceWrapper) PostGetHistory(ctx echo.Context) error {
 	return err
 }
 
+// PostSendMessage converts echo context to params.
+func (w *ServerInterfaceWrapper) PostSendMessage(ctx echo.Context) error {
+	var err error
+
+	ctx.Set(BearerAuthScopes, []string{})
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PostSendMessageParams
+
+	headers := ctx.Request().Header
+	// ------------- Required header parameter "X-Request-ID" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Request-ID")]; found {
+		var XRequestID XRequestIDHeader
+		n := len(valueList)
+		if n != 1 {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Expected one value for X-Request-ID, got %d", n))
+		}
+
+		err = runtime.BindStyledParameterWithLocation("simple", false, "X-Request-ID", runtime.ParamLocationHeader, valueList[0], &XRequestID)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter X-Request-ID: %s", err))
+		}
+
+		params.XRequestID = XRequestID
+	} else {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Header parameter X-Request-ID is required, but not found"))
+	}
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.PostSendMessage(ctx, params)
+	return err
+}
+
 // This is a simple interface which specifies echo.Route addition functions which
 // are present on both echo.Echo and echo.Group, since we want to allow using
 // either of them for path registration
@@ -133,24 +217,30 @@ func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL 
 	}
 
 	router.POST(baseURL+"/getHistory", wrapper.PostGetHistory)
+	router.POST(baseURL+"/sendMessage", wrapper.PostSendMessage)
 
 }
 
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/7RUW0/cSgz+K5HPecxuwuEF5Y2LDmylSqi0KhLahyExyZTMBY+zYovy36u57I2gClXl",
-	"cWLH/vx9n/0CtVHWaNTsoHoBK0goZKTwuv2CTwM6XlxcoWiQ/DepoYIuPnPQQiFUcDtLmbPFBeRA+DRI",
-	"wgYqpgFzcHWHSvi/HwwpwVDBMMgGcuC19f87JqlbyOF51pqZVNYQRzjcQQWt5G64n9dGFb2wkt3j2rmi",
-	"7gTPHNJK1lhIzUha9IWv6GBMpVL98HG+nQbGcdygCoNeIl9Jx4bWKSc0J2ORWGJIqQdyJjBwiHnMwYoW",
-	"b+RP9EElnqUaFFRHZZmDknrz2s7qkbZIEcN+Y2eNdjjt3AgO3P1L+AAV/FPsJCvSDMVndE606K5Fi+AL",
-	"7yS4iwWWYw4pa9pCDNwZWjTvluiA128OKei+Df0VCccc7k2zfpPymlAwNqd8gLgRjDOWCiewxxzkH06X",
-	"SPuIAV/pFABtpUjT78+6p2FUeiKkStGwqYzKvdM4nqA0tSAS64mHtoWXYXWwHkjy+sZXid3uURDS6eDJ",
-	"2Lz+35D96ftXSAvnW8Tojv2O2UY6pH4wQXDJvY+cCf2Y3QzWk52dd4Kz816i5uz0egE5rJCcNP4irY78",
-	"CMaiFlZCBcfzcn4MeVAn4Cva7aoF2kxc8gZdTdJyrHKJnHnJsi5mziHUJOHjfj3g2jjeLW1osLuYd29z",
-	"vUspJhd1XEae0fFZMnttNKMO6IS1vaxD9+KH8xBf9o7p73SdXrRXdvOXOXyIZydw9F9ZfgiAdNkCgkPC",
-	"N27Oeul47jP27RUY3TfW3dLz5fdpw/dhuQtcYW+s8g6JWZDDQH3yWFUUvalF3xnH1Ul5UhbeNsvxVwAA",
-	"AP//oL+s7AYHAAA=",
+	"H4sIAAAAAAAC/9xW32/jNgz+VwRuDxugxM66h4OBPfTHdu2AA4pLhx3Q5UGx2VirLfkkOmtW+H8fKDmx",
+	"06S77rAO254Si5JIft9Hio+Q27qxBg15yB6hUU7VSOjC14f3+LFFT1cXl6gKdLymDWRQxk8JRtUIGXyY",
+	"9DsnVxcgweHHVjssICPXogSfl1grPn1nXa0IMmhbXYAE2jR83pPTZgUSHiYrO+kX+cdPdyGMrRNdN9ZR",
+	"jJhKyGClqWyX09zWSaUaTf5+432Sl4omHt1a55hoQ+iMqpJwMXRd121DC9l+75wNKTbONuhIY1jObYH8",
+	"+6XDO8jgi2RALOlPJ+HoOW/sJBRISlfh7H56nYQavVcrPGLrxrDd7jbK6H/RSRicZI9QoM+dbkhb5iO3",
+	"hpQ2Xlze3FwL5I2Cz3mhTCF8g7m+07lYtl4b9F5UdqXzvX1fUYmiUp5E3XoSSxS/tGl6gt+JWZqmX09B",
+	"Apq2huyWv+UsTWcLCbU2uubVb9N0RybjvArqeJjwmclaOdaJ57x2SZw7VITnpaKIu3xqunZ2WWEdrZz/",
+	"W6RL7cm6Ta+JI1y1zkcOD5Bv1Arn+vcAXq0eYtgzDnuXxOwwh6CRsWPfWOPx0HOhSH1KJe8ip/6aie0k",
+	"4FZwn5RWjOPdIJ5956ql0rqr4vMq7CeP7jXKS8LSFpujZOSB4eKU9iIuFOGEdI0HYXcS9Gdm14P2Oglq",
+	"f1bZ/B6LUZZLaytUJsTs32OOev28fR7vPmZ+0hBCugHQMXx7PsbxjC9fDNoZ+vh/Q0H/D6Eco3LIbERP",
+	"bA0H7PSPQfivCWv/wk7DcPQ5KufUhr8NPtCLnx8P/QGOcY6m6C9+tgH35876wt812pN0v9PKl/kP9xz4",
+	"/ht6cF8Hf7kJ88SAees0beZsi46XqBy605YFsv36YSvAH3++gX7OCPUdrIMiS6ImSkSbOxuY0VSx5UyZ",
+	"ezFvGxag4IdSnFcaDYnT6yuQsEbn4+u/nnEitkGjGg0ZnEzT6QnIoNgQX7LavWABNRup258h3iIJlrEo",
+	"405+8hldxXbuDHBtPQ1vYXAwTIu3xxEctiQH02S3iKSjp61geJBBE6JTTVPpPHhPfvUc4uNokPwztg4H",
+	"hSclyFNpWIhKChh9k6avEkAv1hDBPuDbmheV9jTt1ZX4QenPc8XlIAz+Jvo6EWQFD3DM33HeRgX07yXu",
+	"SIf5h5k71meep070TTySN+oNAdVxV7hdMGb8QGwx37/wAtdY2abm8o67QELrqr5BZElS2VxVpfWUvUnf",
+	"pAnX/KL7IwAA//+BOT5Cvw0AAA==",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

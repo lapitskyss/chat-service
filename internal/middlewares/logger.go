@@ -6,6 +6,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"go.uber.org/zap"
+
+	"github.com/lapitskyss/chat-service/internal/errors"
 )
 
 func Logger(log *zap.Logger) echo.MiddlewareFunc {
@@ -22,13 +24,15 @@ func Logger(log *zap.Logger) echo.MiddlewareFunc {
 				zap.String("path", v.URIPath),
 				zap.String("request_id", v.RequestID),
 				zap.String("user_agent", v.UserAgent),
-				zap.Int("status", v.Status),
 				zap.String("user_id", userIDString(c)),
 			)
 
 			if err := v.Error; err != nil {
 				lg = lg.With(zap.Error(err))
+				v.Status = errors.GetServerErrorCode(err)
 			}
+
+			lg = lg.With(zap.Int("status", v.Status))
 
 			switch s := v.Status; {
 			case s >= 500:

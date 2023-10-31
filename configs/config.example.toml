@@ -4,6 +4,16 @@ env = "dev"
 [log]
 level = "info"
 
+[sentry]
+dsn = ""
+
+[psql]
+address="localhost:5432"
+user="chat-service"
+password="chat-service"
+database="chat-service"
+debug=true
+
 [servers]
 [servers.client]
 addr = ":8080"
@@ -21,6 +31,3 @@ realm = "Bank"
 client_id = "chat-service"
 client_secret = "secret"
 debug_mode = false
-
-[sentry]
-dsn = ""

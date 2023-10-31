@@ -2,8 +2,10 @@ package schema
 
 import (
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
 
 	"github.com/lapitskyss/chat-service/internal/types"
 )
@@ -22,6 +24,7 @@ func (Message) Fields() []ent.Field {
 		field.UUID("chat_id", types.ChatID{}),
 		field.UUID("problem_id", types.ProblemID{}),
 		field.UUID("author_id", types.UserID{}).Optional().Immutable(),
+		field.UUID("initial_request_id", types.RequestID{}).Unique().Immutable(),
 		field.Bool("is_visible_for_client").Default(false),
 		field.Bool("is_visible_for_manager").Default(false),
 		field.Text("body").NotEmpty().MaxLen(messageBodyMaxLength).Immutable(),
@@ -46,5 +49,16 @@ func (Message) Edges() []ent.Edge {
 			Ref("messages").
 			Field("problem_id").
 			Required().Unique(),
+	}
+}
+
+func (Message) Indexes() []ent.Index {
+	return []ent.Index{
+		// Getting history is based on created_at field.
+		index.Fields("created_at").
+			Annotations(
+				entsql.DescColumns("created_at"),
+				entsql.IndexType("BTREE"),
+			),
 	}
 }

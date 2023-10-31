@@ -56,6 +56,7 @@ func TestChatServiceSchema(t *testing.T) {
 			SetChatID(chat.ID).
 			SetProblemID(problems[0].ID).
 			SetAuthorID(clientID).
+			SetInitialRequestID(types.NewRequestID()).
 			SetIsVisibleForClient(true).
 			SetIsVisibleForManager(true).
 			SetIsBlocked(false).
@@ -67,6 +68,7 @@ func TestChatServiceSchema(t *testing.T) {
 			SetChatID(chat.ID).
 			SetProblemID(problems[0].ID).
 			SetAuthorID(managerID).
+			SetInitialRequestID(types.NewRequestID()).
 			SetIsVisibleForClient(true).
 			SetIsVisibleForManager(true).
 			SetIsBlocked(false).
@@ -79,6 +81,7 @@ func TestChatServiceSchema(t *testing.T) {
 			SetChatID(chat.ID).
 			SetProblemID(problems[1].ID).
 			SetAuthorID(clientID).
+			SetInitialRequestID(types.NewRequestID()).
 			SetIsVisibleForClient(true).
 			SetIsVisibleForManager(true).
 			SetIsBlocked(false).
@@ -90,6 +93,7 @@ func TestChatServiceSchema(t *testing.T) {
 			SetChatID(chat.ID).
 			SetProblemID(problems[1].ID).
 			SetAuthorID(managerID).
+			SetInitialRequestID(types.NewRequestID()).
 			SetIsVisibleForClient(true).
 			SetIsVisibleForManager(true).
 			SetIsBlocked(false).

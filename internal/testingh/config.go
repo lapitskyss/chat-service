@@ -16,6 +16,11 @@ var Config config
 type config struct {
 	LogLevel string `envconfig:"LOG_LEVEL" default:"info" validate:"required,oneof=debug info warn error"`
 
+	PostgresAddress  string `envconfig:"PSQL_ADDRESS" default:"localhost:5432" validate:"required,hostname_port"`
+	PostgresUser     string `envconfig:"PSQL_USER" validate:"required"`
+	PostgresPassword string `envconfig:"PSQL_PASSWORD" validate:"required"`
+	PostgresDebug    bool   `envconfig:"PSQL_DEBUG" default:"false"`
+
 	KeycloakBasePath     string `envconfig:"KEYCLOAK_BASE_PATH" default:"http://localhost:3010" validate:"required,url"`
 	KeycloakRealm        string `envconfig:"KEYCLOAK_REALM" default:"Testing" validate:"required"`
 	KeycloakClientID     string `envconfig:"KEYCLOAK_CLIENT_ID" validate:"required"`

@@ -19,12 +19,13 @@ var Level zap.AtomicLevel
 //go:generate options-gen -out-filename=logger_options.gen.go -from-struct=Options
 type Options struct {
 	level          string `option:"mandatory" validate:"required,oneof=debug info warn error"`
-	sentryDNS      string `validate:"omitempty,url"`
 	productionMode bool
+	sentryDSN      string `validate:"omitempty,url"`
+	sentryEnv      string `validate:"omitempty,oneof=dev stage prod"`
 }
 
 func (c *Options) IsSentryEnabled() bool {
-	return c.sentryDNS != ""
+	return c.sentryDSN != ""
 }
 
 func MustInit(opts Options) {
@@ -92,7 +93,7 @@ func sentryZapcore(opts Options) (zapcore.Core, error) {
 		env = "prod"
 	}
 	client, err := NewSentryClient(
-		opts.sentryDNS,
+		opts.sentryDSN,
 		env,
 		buildinfo.DepsVersion("github.com/getsentry/sentry-go"),
 	)
