@@ -23,6 +23,7 @@ require (
 	github.com/onsi/gomega v1.29.0
 	github.com/pelletier/go-toml/v2 v2.1.0
 	github.com/stretchr/testify v1.8.4
+	go.uber.org/goleak v1.2.0
 	go.uber.org/mock v0.3.0
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.26.0

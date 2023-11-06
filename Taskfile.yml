@@ -27,6 +27,8 @@ vars:
     MessageID
     UserID
     RequestID
+    JobID
+    FailedJobID
 
   DOCKER_COMPOSE_PATHS: |
     ./deploy/local/docker-compose.yml
@@ -37,7 +39,7 @@ vars:
 
   ENT_SCHEMA: ./internal/store/schema
   ENT_TEMPLATES: ./internal/store/templates/database.tmpl
-  ENT_FEATURES: sql/upsert
+  ENT_FEATURES: sql/upsert,sql/lock
 
   CLIENT_V1_SRC: ./api/client.v1.swagger.yml
   CLIENT_V1_DST: ./internal/server-client/v1/server.gen.go
