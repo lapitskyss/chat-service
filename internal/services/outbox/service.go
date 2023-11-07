@@ -13,6 +13,8 @@ import (
 	"github.com/lapitskyss/chat-service/internal/types"
 )
 
+const serviceName = "outbox"
+
 var ErrJobAlreadyExist = errors.New("job already exits")
 
 type jobsRepository interface {
@@ -34,7 +36,6 @@ type Options struct {
 
 	jobsRepo jobsRepository `option:"mandatory" validate:"required"`
 	tr       transactor     `option:"mandatory" validate:"required"`
-	logger   *zap.Logger
 }
 
 type Service struct {
@@ -169,7 +170,5 @@ func (s *Service) jobFailed(ctx context.Context, job jobsrepo.Job, reason string
 }
 
 func (s *Service) logError(msg string, err error) {
-	if s.logger != nil {
-		s.logger.Error(msg, zap.Error(err))
-	}
+	zap.L().Named(serviceName).Error(msg, zap.Error(err))
 }
