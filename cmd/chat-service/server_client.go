@@ -13,6 +13,7 @@ import (
 	serverclient "github.com/lapitskyss/chat-service/internal/server-client"
 	"github.com/lapitskyss/chat-service/internal/server-client/errhandler"
 	clientv1 "github.com/lapitskyss/chat-service/internal/server-client/v1"
+	"github.com/lapitskyss/chat-service/internal/services/outbox"
 	"github.com/lapitskyss/chat-service/internal/store"
 	gethistory "github.com/lapitskyss/chat-service/internal/usecases/client/get-history"
 	sendmessage "github.com/lapitskyss/chat-service/internal/usecases/client/send-message"
@@ -35,6 +36,8 @@ func initServerClient(
 	chatRepo *chatsrepo.Repo,
 	msgRepo *messagesrepo.Repo,
 	problemRepo *problemsrepo.Repo,
+
+	outboxSvc *outbox.Service,
 ) (*serverclient.Server, error) {
 	lg := zap.L().Named(nameServerClient)
 
@@ -46,6 +49,7 @@ func initServerClient(
 	sendMessageUseCase, err := sendmessage.New(sendmessage.NewOptions(
 		chatRepo,
 		msgRepo,
+		outboxSvc,
 		problemRepo,
 		db,
 	))

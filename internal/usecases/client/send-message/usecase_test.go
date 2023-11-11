@@ -11,6 +11,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	messagesrepo "github.com/lapitskyss/chat-service/internal/repositories/messages"
+	sendclientmessagejob "github.com/lapitskyss/chat-service/internal/services/outbox/jobs/send-client-message"
 	"github.com/lapitskyss/chat-service/internal/testingh"
 	"github.com/lapitskyss/chat-service/internal/types"
 	sendmessage "github.com/lapitskyss/chat-service/internal/usecases/client/send-message"
@@ -23,6 +24,7 @@ type UseCaseSuite struct {
 	ctrl        *gomock.Controller
 	chatRepo    *sendmessagemocks.MockchatsRepository
 	msgRepo     *sendmessagemocks.MockmessagesRepository
+	outBoxSvc   *sendmessagemocks.MockoutboxService
 	problemRepo *sendmessagemocks.MockproblemsRepository
 	txtor       *sendmessagemocks.Mocktransactor
 	uCase       sendmessage.UseCase
@@ -37,11 +39,12 @@ func (s *UseCaseSuite) SetupTest() {
 	s.ctrl = gomock.NewController(s.T())
 	s.chatRepo = sendmessagemocks.NewMockchatsRepository(s.ctrl)
 	s.msgRepo = sendmessagemocks.NewMockmessagesRepository(s.ctrl)
+	s.outBoxSvc = sendmessagemocks.NewMockoutboxService(s.ctrl)
 	s.problemRepo = sendmessagemocks.NewMockproblemsRepository(s.ctrl)
 	s.txtor = sendmessagemocks.NewMocktransactor(s.ctrl)
 
 	var err error
-	s.uCase, err = sendmessage.New(sendmessage.NewOptions(s.chatRepo, s.msgRepo, s.problemRepo, s.txtor))
+	s.uCase, err = sendmessage.New(sendmessage.NewOptions(s.chatRepo, s.msgRepo, s.outBoxSvc, s.problemRepo, s.txtor))
 	s.Require().NoError(err)
 
 	s.ContextSuite.SetupTest()
@@ -215,6 +218,39 @@ func (s *UseCaseSuite) TestCreateMessageError() {
 	s.Require().Error(err)
 }
 
+func (s *UseCaseSuite) TestPutJobError() {
+	// Arrange.
+	reqID := types.NewRequestID()
+	clientID := types.NewUserID()
+	chatID := types.NewChatID()
+	problemID := types.NewProblemID()
+	const msgBody = "Hello!"
+
+	s.txtor.EXPECT().RunInTx(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, f func(ctx context.Context) error) error {
+			return f(ctx)
+		})
+	s.msgRepo.EXPECT().GetMessageByRequestID(gomock.Any(), reqID).Return(nil, messagesrepo.ErrMsgNotFound)
+	s.chatRepo.EXPECT().CreateIfNotExists(gomock.Any(), clientID).Return(chatID, nil)
+	s.problemRepo.EXPECT().CreateIfNotExists(gomock.Any(), chatID).Return(problemID, nil)
+	s.msgRepo.EXPECT().CreateClientVisible(gomock.Any(), reqID, problemID, chatID, clientID, msgBody).
+		Return(&messagesrepo.Message{ID: types.NewMessageID()}, nil)
+	s.outBoxSvc.EXPECT().Put(gomock.Any(), sendclientmessagejob.Name, gomock.Any(), gomock.Any()).
+		Return(types.JobIDNil, errors.New("unexpected"))
+
+	req := sendmessage.Request{
+		ID:          reqID,
+		ClientID:    clientID,
+		MessageBody: msgBody,
+	}
+
+	// Action.
+	_, err := s.uCase.Handle(s.Ctx, req)
+
+	// Assert.
+	s.Require().Error(err)
+}
+
 func (s *UseCaseSuite) TestTransactionError() {
 	// Arrange.
 	reqID := types.NewRequestID()
@@ -233,6 +269,8 @@ func (s *UseCaseSuite) TestTransactionError() {
 	s.problemRepo.EXPECT().CreateIfNotExists(gomock.Any(), chatID).Return(problemID, nil)
 	s.msgRepo.EXPECT().CreateClientVisible(gomock.Any(), reqID, problemID, chatID, clientID, msgBody).
 		Return(&messagesrepo.Message{ID: types.NewMessageID()}, nil)
+	s.outBoxSvc.EXPECT().Put(gomock.Any(), sendclientmessagejob.Name, gomock.Any(), gomock.Any()).
+		Return(types.NewJobID(), nil)
 
 	req := sendmessage.Request{
 		ID:          reqID,
@@ -279,6 +317,8 @@ func (s *UseCaseSuite) TestNewMsgCreatedSuccessfully() {
 			IsBlocked:           false,
 			IsService:           false,
 		}, nil)
+	s.outBoxSvc.EXPECT().Put(gomock.Any(), sendclientmessagejob.Name, gomock.Any(), gomock.Any()).
+		Return(types.NewJobID(), nil)
 
 	req := sendmessage.Request{
 		ID:          reqID,

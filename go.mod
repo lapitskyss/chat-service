@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	entgo.io/ent v0.12.4
+	github.com/BurntSushi/toml v1.3.2
 	github.com/TheZeroSlave/zapsentry v1.18.0
 	github.com/deepmap/oapi-codegen v1.15.0
 	github.com/getkin/kin-openapi v0.120.0
@@ -21,7 +22,6 @@ require (
 	github.com/oapi-codegen/runtime v1.0.0
 	github.com/onsi/ginkgo/v2 v2.13.0
 	github.com/onsi/gomega v1.29.0
-	github.com/pelletier/go-toml/v2 v2.1.0
 	github.com/segmentio/kafka-go v0.4.44
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/goleak v1.2.0

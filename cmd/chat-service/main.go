@@ -17,10 +17,14 @@ import (
 	"github.com/lapitskyss/chat-service/internal/config"
 	"github.com/lapitskyss/chat-service/internal/logger"
 	chatsrepo "github.com/lapitskyss/chat-service/internal/repositories/chats"
+	jobsrepo "github.com/lapitskyss/chat-service/internal/repositories/jobs"
 	messagesrepo "github.com/lapitskyss/chat-service/internal/repositories/messages"
 	problemsrepo "github.com/lapitskyss/chat-service/internal/repositories/problems"
 	clientv1 "github.com/lapitskyss/chat-service/internal/server-client/v1"
 	serverdebug "github.com/lapitskyss/chat-service/internal/server-debug"
+	msgproducer "github.com/lapitskyss/chat-service/internal/services/msg-producer"
+	"github.com/lapitskyss/chat-service/internal/services/outbox"
+	sendclientmessagejob "github.com/lapitskyss/chat-service/internal/services/outbox/jobs/send-client-message"
 	"github.com/lapitskyss/chat-service/internal/store"
 )
 
@@ -105,6 +109,51 @@ func run() (errReturned error) {
 	if err != nil {
 		return fmt.Errorf("messages repository: %v", err)
 	}
+	jobsRepo, err := jobsrepo.New(jobsrepo.NewOptions(db))
+	if err != nil {
+		return fmt.Errorf("jobs repository: %v", err)
+	}
+
+	// Services
+	msgProducer, err := msgproducer.New(msgproducer.NewOptions(
+		msgproducer.NewKafkaWriter(
+			cfg.Services.MsgProducer.Brokers,
+			cfg.Services.MsgProducer.Topic,
+			cfg.Services.MsgProducer.BatchSize,
+		),
+		msgproducer.WithEncryptKey(cfg.Services.MsgProducer.EncryptKey),
+	))
+	if err != nil {
+		return fmt.Errorf("message producer service: %v", err)
+	}
+
+	outBox, err := outbox.New(outbox.NewOptions(
+		cfg.Services.Outbox.Workers,
+		cfg.Services.Outbox.IdleTime,
+		cfg.Services.Outbox.ReserveFor,
+		jobsRepo,
+		db,
+	))
+	if err != nil {
+		return fmt.Errorf("outbox service: %v", err)
+	}
+
+	sendClientMessageJob, err := sendclientmessagejob.New(sendclientmessagejob.NewOptions(
+		msgProducer,
+		msgRepo,
+	))
+	if err != nil {
+		return fmt.Errorf("send client message job: %v", err)
+	}
+	err = outBox.RegisterJob(sendClientMessageJob)
+	if err != nil {
+		return fmt.Errorf("register send client message job: %v", err)
+	}
+
+	err = outBox.Run(ctx)
+	if err != nil {
+		return fmt.Errorf("run outbox: %v", err)
+	}
 
 	// Servers.
 	clientV1Swagger, err := clientv1.GetSwagger()
@@ -124,6 +173,7 @@ func run() (errReturned error) {
 		chatRepo,
 		msgRepo,
 		problemRepo,
+		outBox,
 	)
 	if err != nil {
 		return fmt.Errorf("init client server: %v", err)

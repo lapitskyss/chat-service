@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/lapitskyss/chat-service/internal/store"
-	"github.com/lapitskyss/chat-service/internal/store/job"
 	"github.com/lapitskyss/chat-service/internal/types"
 )
 
@@ -21,45 +19,45 @@ type Job struct {
 }
 
 func (r *Repo) FindAndReserveJob(ctx context.Context, until time.Time) (Job, error) {
-	var j *store.Job
-	err := r.db.RunInTx(ctx, func(ctx context.Context) error {
-		var err error
-		now := time.Now()
-		j, err = r.db.Job(ctx).
-			Query().
-			Where(
-				job.ReservedUntilLTE(now),
-				job.AvailableAtLTE(now),
-			).
-			ForUpdate().
-			First(ctx)
-		if err != nil {
-			if store.IsNotFound(err) {
-				return ErrNoJobs
-			}
-			return fmt.Errorf("find job: %v", err)
-		}
+	query := `
+	WITH sq AS (
+		SELECT id FROM jobs
+		WHERE available_at <= now() AND reserved_until <= now()
+		LIMIT 1 FOR UPDATE SKIP LOCKED
+	)
+	UPDATE jobs AS j
+	SET attempts = attempts + 1, reserved_until = $1 
+	FROM sq 
+	WHERE sq.id = j.id RETURNING
+		j.id,
+		j.name,
+		j.payload,
+		j.attempts;
+	`
 
-		j, err = r.db.Job(ctx).
-			UpdateOne(j).
-			SetReservedUntil(until).
-			SetAttempts(j.Attempts + 1).
-			Save(ctx)
-		if err != nil {
-			return fmt.Errorf("reserve job: %v", err)
-		}
-
-		return nil
-	})
+	rows, err := r.db.Job(ctx).QueryContext(ctx, query, until)
 	if err != nil {
-		return Job{}, fmt.Errorf("find and reserve job: %w", err)
+		return Job{}, fmt.Errorf("query context: %w", err)
 	}
-	return Job{
-		ID:       j.ID,
-		Name:     j.Name,
-		Payload:  j.Payload,
-		Attempts: j.Attempts,
-	}, nil
+	defer rows.Close()
+
+	var j Job
+	for rows.Next() {
+		err = rows.Scan(&j.ID, &j.Name, &j.Payload, &j.Attempts)
+		if err != nil {
+			return Job{}, fmt.Errorf("scan rows: %v", err)
+		}
+	}
+
+	if err = rows.Err(); err != nil {
+		return Job{}, fmt.Errorf("rows err: %v", err)
+	}
+
+	if j.ID.IsZero() {
+		return Job{}, ErrNoJobs
+	}
+
+	return j, nil
 }
 
 func (r *Repo) CreateJob(ctx context.Context, name, payload string, availableAt time.Time) (types.JobID, error) {

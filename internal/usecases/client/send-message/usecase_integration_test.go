@@ -6,13 +6,16 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 
 	chatsrepo "github.com/lapitskyss/chat-service/internal/repositories/chats"
+	jobsrepo "github.com/lapitskyss/chat-service/internal/repositories/jobs"
 	messagesrepo "github.com/lapitskyss/chat-service/internal/repositories/messages"
 	problemsrepo "github.com/lapitskyss/chat-service/internal/repositories/problems"
+	"github.com/lapitskyss/chat-service/internal/services/outbox"
 	"github.com/lapitskyss/chat-service/internal/testingh"
 	"github.com/lapitskyss/chat-service/internal/types"
 	sendmessage "github.com/lapitskyss/chat-service/internal/usecases/client/send-message"
@@ -37,10 +40,16 @@ func TestUseCaseIntegrationSuite(t *testing.T) {
 func (s *UseCaseIntegrationSuite) SetupSuite() {
 	s.DBSuite.SetupSuite()
 
+	jobsRepo, err := jobsrepo.New(jobsrepo.NewOptions(s.Database))
+	s.Require().NoError(err)
+
 	chatRepo, err := chatsrepo.New(chatsrepo.NewOptions(s.Database))
 	s.Require().NoError(err)
 
 	msgRepo, err := messagesrepo.New(messagesrepo.NewOptions(s.Database))
+	s.Require().NoError(err)
+
+	outBoxSvc, err := outbox.New(outbox.NewOptions(1, 10*time.Second, time.Minute, jobsRepo, s.Database))
 	s.Require().NoError(err)
 
 	problemRepo, err := problemsrepo.New(problemsrepo.NewOptions(s.Database))
@@ -49,6 +58,7 @@ func (s *UseCaseIntegrationSuite) SetupSuite() {
 	s.uCase, err = sendmessage.New(sendmessage.NewOptions(
 		chatRepo,
 		msgRepo,
+		outBoxSvc,
 		problemRepo,
 		s.Database,
 	))
@@ -59,6 +69,7 @@ func (s *UseCaseIntegrationSuite) SetupSuite() {
 	s.uCaseWithMsgRepoMock, err = sendmessage.New(sendmessage.NewOptions(
 		chatRepo,
 		s.msgRepoMock,
+		outBoxSvc,
 		problemRepo,
 		s.Database,
 	))
@@ -76,6 +87,7 @@ func (s *UseCaseIntegrationSuite) SetupTest() {
 	s.Database.Message(s.Ctx).Delete().ExecX(s.Ctx)
 	s.Database.Problem(s.Ctx).Delete().ExecX(s.Ctx)
 	s.Database.Chat(s.Ctx).Delete().ExecX(s.Ctx)
+	s.Database.Job(s.Ctx).Delete().ExecX(s.Ctx)
 }
 
 func (s *UseCaseIntegrationSuite) TestPositiveScenario() {
@@ -100,6 +112,8 @@ func (s *UseCaseIntegrationSuite) TestPositiveScenario() {
 	s.Equal(1, s.Database.Chat(s.Ctx).Query().CountX(s.Ctx))
 	s.Equal(1, s.Database.Problem(s.Ctx).Query().CountX(s.Ctx))
 	s.Equal(messages, s.Database.Message(s.Ctx).Query().CountX(s.Ctx))
+	s.Equal(messages, s.Database.Job(s.Ctx).Query().CountX(s.Ctx))
+	s.Equal(0, s.Database.FailedJob(s.Ctx).Query().CountX(s.Ctx))
 }
 
 func (s *UseCaseIntegrationSuite) TestIdempotency() {
@@ -125,6 +139,8 @@ func (s *UseCaseIntegrationSuite) TestIdempotency() {
 	s.Equal(1, s.Database.Chat(s.Ctx).Query().CountX(s.Ctx))
 	s.Equal(1, s.Database.Problem(s.Ctx).Query().CountX(s.Ctx))
 	s.Equal(1, s.Database.Message(s.Ctx).Query().CountX(s.Ctx))
+	s.Equal(1, s.Database.Job(s.Ctx).Query().CountX(s.Ctx))
+	s.Equal(0, s.Database.FailedJob(s.Ctx).Query().CountX(s.Ctx))
 }
 
 func (s *UseCaseIntegrationSuite) TestAllOrNothing() {
@@ -149,4 +165,6 @@ func (s *UseCaseIntegrationSuite) TestAllOrNothing() {
 	s.Equal(0, s.Database.Chat(s.Ctx).Query().CountX(s.Ctx))
 	s.Equal(0, s.Database.Problem(s.Ctx).Query().CountX(s.Ctx))
 	s.Equal(0, s.Database.Message(s.Ctx).Query().CountX(s.Ctx))
+	s.Equal(0, s.Database.Job(s.Ctx).Query().CountX(s.Ctx))
+	s.Equal(0, s.Database.FailedJob(s.Ctx).Query().CountX(s.Ctx))
 }

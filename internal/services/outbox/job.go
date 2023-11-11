@@ -20,3 +20,19 @@ type Job interface {
 	// When MaxAttempts() is exceeded, the task moves to the dlq (dead letter queue) table.
 	MaxAttempts() int
 }
+
+const (
+	defaultExecutionTimeout = 30 * time.Second
+	defaultMaxAttempts      = 30
+)
+
+// DefaultJob is useful for embedding into other jobs.
+type DefaultJob struct{}
+
+func (j DefaultJob) ExecutionTimeout() time.Duration {
+	return defaultExecutionTimeout
+}
+
+func (j DefaultJob) MaxAttempts() int {
+	return defaultMaxAttempts
+}

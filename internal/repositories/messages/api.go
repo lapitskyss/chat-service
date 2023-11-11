@@ -12,6 +12,22 @@ import (
 
 var ErrMsgNotFound = errors.New("message not found")
 
+func (r *Repo) GetMessageByID(ctx context.Context, id types.MessageID) (*Message, error) {
+	m, err := r.db.Message(ctx).
+		Query().
+		Unique(false).
+		Where(message.ID(id)).
+		Only(ctx)
+	if err != nil {
+		if store.IsNotFound(err) {
+			return nil, fmt.Errorf("message id %v: %w", id, ErrMsgNotFound)
+		}
+		return nil, fmt.Errorf("get message by id: %v", err)
+	}
+	msg := adaptStoreMessage(m)
+	return &msg, nil
+}
+
 func (r *Repo) GetMessageByRequestID(ctx context.Context, reqID types.RequestID) (*Message, error) {
 	m, err := r.db.Message(ctx).
 		Query().
@@ -28,7 +44,6 @@ func (r *Repo) GetMessageByRequestID(ctx context.Context, reqID types.RequestID)
 	return &msg, nil
 }
 
-// CreateClientVisible creates a message that is visible only to the client.
 func (r *Repo) CreateClientVisible(
 	ctx context.Context,
 	reqID types.RequestID,
