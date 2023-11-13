@@ -37,8 +37,9 @@ type PSQLConfig struct {
 }
 
 type ServersConfig struct {
-	Debug  DebugServerConfig `toml:"debug"`
-	Client APIServerConfig   `toml:"client"`
+	Debug   DebugServerConfig `toml:"debug"`
+	Client  APIServerConfig   `toml:"client"`
+	Manager APIManagerConfig  `toml:"manager"`
 }
 
 type DebugServerConfig struct {
@@ -46,6 +47,12 @@ type DebugServerConfig struct {
 }
 
 type APIServerConfig struct {
+	Addr           string               `toml:"addr" validate:"required,hostname_port"`
+	AllowOrigins   []string             `toml:"allow_origins" validate:"required"`
+	RequiredAccess RequiredAccessConfig `toml:"required_access"`
+}
+
+type APIManagerConfig struct {
 	Addr           string               `toml:"addr" validate:"required,hostname_port"`
 	AllowOrigins   []string             `toml:"allow_origins" validate:"required"`
 	RequiredAccess RequiredAccessConfig `toml:"required_access"`
@@ -71,6 +78,7 @@ type KeycloakConfig struct {
 type ServicesConfig struct {
 	MsgProducer MsgProducerConfig `toml:"msg_producer"`
 	Outbox      OutboxConfig      `toml:"outbox"`
+	ManagerLoad ManagerLoadConfig `toml:"manager_load"`
 }
 
 type MsgProducerConfig struct {
@@ -84,4 +92,8 @@ type OutboxConfig struct {
 	Workers    int           `toml:"workers" validate:"min=1,max=32"`
 	IdleTime   time.Duration `toml:"idle_time" validate:"min=100ms,max=10s"`
 	ReserveFor time.Duration `toml:"reserve_for" validate:"min=1s,max=10m"`
+}
+
+type ManagerLoadConfig struct {
+	MaxProblemsAtTime int `toml:"max_problems_at_same_time" validate:"min=1,max=30"`
 }

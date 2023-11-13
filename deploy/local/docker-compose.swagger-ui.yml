@@ -11,4 +11,5 @@ services:
     environment:
       URLS: "[
         {url: 'api/client.v1.swagger.yml', name: 'Bank Support Chat Client API'},
+        {url: 'api/manager.v1.swagger.yml', name: 'Bank Support Chat Manager API'},
       ]"

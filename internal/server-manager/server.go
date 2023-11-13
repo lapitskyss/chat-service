@@ -1,4 +1,4 @@
-package serverclient
+package servermanager
 
 import (
 	"fmt"
@@ -13,20 +13,20 @@ import (
 
 	"github.com/lapitskyss/chat-service/internal/middlewares"
 	"github.com/lapitskyss/chat-service/internal/server"
-	clientv1 "github.com/lapitskyss/chat-service/internal/server-client/v1"
+	managerv1 "github.com/lapitskyss/chat-service/internal/server-manager/v1"
 )
 
 //go:generate options-gen -out-filename=server_options.gen.go -from-struct=Options
 type Options struct {
-	logger           *zap.Logger              `option:"mandatory" validate:"required"`
-	addr             string                   `option:"mandatory" validate:"required,hostname_port"`
-	allowOrigins     []string                 `option:"mandatory" validate:"min=1"`
-	introspector     middlewares.Introspector `option:"mandatory" validate:"required"`
-	requiredResource string                   `option:"mandatory" validate:"required"`
-	requiredRole     string                   `option:"mandatory" validate:"required"`
-	v1Swagger        *openapi3.T              `option:"mandatory" validate:"required"`
-	v1Handlers       clientv1.ServerInterface `option:"mandatory" validate:"required"`
-	httpErrorHandler echo.HTTPErrorHandler    `option:"mandatory" validate:"required"`
+	logger           *zap.Logger               `option:"mandatory" validate:"required"`
+	addr             string                    `option:"mandatory" validate:"required,hostname_port"`
+	allowOrigins     []string                  `option:"mandatory" validate:"min=1"`
+	introspector     middlewares.Introspector  `option:"mandatory" validate:"required"`
+	requiredResource string                    `option:"mandatory" validate:"required"`
+	requiredRole     string                    `option:"mandatory" validate:"required"`
+	v1Swagger        *openapi3.T               `option:"mandatory" validate:"required"`
+	v1Handlers       managerv1.ServerInterface `option:"mandatory" validate:"required"`
+	httpErrorHandler echo.HTTPErrorHandler     `option:"mandatory" validate:"required"`
 }
 
 func New(opts Options) (*server.Server, error) {
@@ -53,7 +53,7 @@ func New(opts Options) (*server.Server, error) {
 		},
 		SilenceServersWarning: true,
 	}))
-	clientv1.RegisterHandlers(v1, opts.v1Handlers)
+	managerv1.RegisterHandlers(v1, opts.v1Handlers)
 
 	return server.New(server.NewOptions(opts.logger, opts.addr, e))
 }

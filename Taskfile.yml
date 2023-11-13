@@ -45,6 +45,10 @@ vars:
   CLIENT_V1_DST: ./internal/server-client/v1/server.gen.go
   CLIENT_V1_PKG: clientv1
 
+  MANAGER_V1_SRC: ./api/manager.v1.swagger.yml
+  MANAGER_V1_DST: ./internal/server-manager/v1/server.gen.go
+  MANAGER_V1_PKG: managerv1
+
   E2E_CLIENT_V1_DST: ./tests/e2e/api/client/v1/client.gen.go
   E2E_CLIENT_V1_PKG: apiclientv1
 
@@ -198,6 +202,8 @@ tasks:
     cmds:
       - echo "Generate client server..."
       - oapi-codegen --old-config-style -generate types,server,spec -package {{.CLIENT_V1_PKG}} {{.CLIENT_V1_SRC}} > {{.CLIENT_V1_DST}}
+      - echo "Generate manager server..."
+      - oapi-codegen --old-config-style -generate types,server,spec -package {{.MANAGER_V1_PKG}} {{.MANAGER_V1_SRC}} > {{.MANAGER_V1_DST}}
       - task: tidy
 
   gen:e2e:

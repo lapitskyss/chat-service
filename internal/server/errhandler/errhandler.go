@@ -36,16 +36,22 @@ func New(opts Options) (Handler, error) {
 	}, nil
 }
 
-func (h Handler) Handle(err error, c echo.Context) {
-	if err := c.JSON(http.StatusOK, h.response(err)); err != nil {
-		h.lg.Error("write error response", zap.Error(err))
+func (h Handler) Handle(err error, eCtx echo.Context) {
+	code, msg, details := h.processError(err)
+
+	resp := h.responseBuilder(code, msg, details)
+
+	if err2 := eCtx.JSON(http.StatusOK, resp); err2 != nil {
+		h.lg.Error("error handler JSON", zap.Error(err))
 	}
 }
 
-func (h Handler) response(err error) any {
-	code, msg, details := errors.ProcessServerError(err)
+func (h Handler) processError(err error) (code int, msg string, details string) {
+	code, msg, details = errors.ProcessServerError(err)
+
+	// If production mode is ON method should return only code and message and hide details.
 	if h.productionMode {
-		return h.responseBuilder(code, msg, "")
+		details = ""
 	}
-	return h.responseBuilder(code, msg, details)
+	return
 }

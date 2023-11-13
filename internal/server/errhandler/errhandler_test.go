@@ -15,7 +15,7 @@ import (
 	"go.uber.org/zap"
 
 	internalerrors "github.com/lapitskyss/chat-service/internal/errors"
-	"github.com/lapitskyss/chat-service/internal/server-client/errhandler"
+	"github.com/lapitskyss/chat-service/internal/server/errhandler"
 )
 
 func TestHandler_Handle_InDevMode(t *testing.T) {

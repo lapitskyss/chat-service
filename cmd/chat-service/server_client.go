@@ -10,9 +10,10 @@ import (
 	chatsrepo "github.com/lapitskyss/chat-service/internal/repositories/chats"
 	messagesrepo "github.com/lapitskyss/chat-service/internal/repositories/messages"
 	problemsrepo "github.com/lapitskyss/chat-service/internal/repositories/problems"
+	"github.com/lapitskyss/chat-service/internal/server"
 	serverclient "github.com/lapitskyss/chat-service/internal/server-client"
-	"github.com/lapitskyss/chat-service/internal/server-client/errhandler"
 	clientv1 "github.com/lapitskyss/chat-service/internal/server-client/v1"
+	"github.com/lapitskyss/chat-service/internal/server/errhandler"
 	"github.com/lapitskyss/chat-service/internal/services/outbox"
 	"github.com/lapitskyss/chat-service/internal/store"
 	gethistory "github.com/lapitskyss/chat-service/internal/usecases/client/get-history"
@@ -38,7 +39,7 @@ func initServerClient(
 	problemRepo *problemsrepo.Repo,
 
 	outboxSvc *outbox.Service,
-) (*serverclient.Server, error) {
+) (*server.Server, error) {
 	lg := zap.L().Named(nameServerClient)
 
 	getHistoryUseCase, err := gethistory.New(gethistory.NewOptions(msgRepo))
