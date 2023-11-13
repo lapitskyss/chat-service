@@ -73,7 +73,7 @@ func (s *ServiceSuite) TestCanManagerTakeProblem_MaxError() {
 	resp, err := s.managerLoad.CanManagerTakeProblem(s.Ctx, managerID)
 
 	// Assert.
-	s.Require().Error(err)
+	s.Require().NoError(err)
 	s.Require().Equal(false, resp)
 }
 

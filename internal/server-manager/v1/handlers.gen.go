@@ -12,6 +12,7 @@ type OptOptionsSetter func(o *Options)
 
 func NewOptions(
 	canReceiveProblems canReceiveProblemsUseCase,
+	freeHands freeHandsUseCase,
 	options ...OptOptionsSetter,
 ) Options {
 	o := Options{}
@@ -19,6 +20,7 @@ func NewOptions(
 	// Setting defaults from field tag (if present)
 
 	o.canReceiveProblems = canReceiveProblems
+	o.freeHands = freeHands
 
 	for _, opt := range options {
 		opt(&o)
@@ -29,12 +31,20 @@ func NewOptions(
 func (o *Options) Validate() error {
 	errs := new(errors461e464ebed9.ValidationErrors)
 	errs.Add(errors461e464ebed9.NewValidationError("canReceiveProblems", _validate_Options_canReceiveProblems(o)))
+	errs.Add(errors461e464ebed9.NewValidationError("freeHands", _validate_Options_freeHands(o)))
 	return errs.AsError()
 }
 
 func _validate_Options_canReceiveProblems(o *Options) error {
 	if err := validator461e464ebed9.GetValidatorFor(o).Var(o.canReceiveProblems, "required"); err != nil {
 		return fmt461e464ebed9.Errorf("field `canReceiveProblems` did not pass the test: %w", err)
+	}
+	return nil
+}
+
+func _validate_Options_freeHands(o *Options) error {
+	if err := validator461e464ebed9.GetValidatorFor(o).Var(o.freeHands, "required"); err != nil {
+		return fmt461e464ebed9.Errorf("field `freeHands` did not pass the test: %w", err)
 	}
 	return nil
 }

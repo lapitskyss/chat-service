@@ -80,7 +80,7 @@ func (s *UseCaseSuite) TestManagerAlreadyInPool() {
 	reqID := types.NewRequestID()
 	managerID := types.NewUserID()
 
-	s.mPoolMock.EXPECT().Contains(gomock.Any(), managerID).Return(false, nil)
+	s.mPoolMock.EXPECT().Contains(gomock.Any(), managerID).Return(true, nil)
 
 	req := canreceiveproblems.Request{
 		ID:        reqID,
@@ -100,7 +100,7 @@ func (s *UseCaseSuite) TestCanManagerTakeProblemError() {
 	reqID := types.NewRequestID()
 	managerID := types.NewUserID()
 
-	s.mPoolMock.EXPECT().Contains(gomock.Any(), managerID).Return(true, nil)
+	s.mPoolMock.EXPECT().Contains(gomock.Any(), managerID).Return(false, nil)
 	s.mLoadMock.EXPECT().CanManagerTakeProblem(gomock.Any(), managerID).
 		Return(false, errors.New("unexpected"))
 
@@ -121,7 +121,7 @@ func (s *UseCaseSuite) TestCanManagerTakeProblemNegativeResult() {
 	reqID := types.NewRequestID()
 	managerID := types.NewUserID()
 
-	s.mPoolMock.EXPECT().Contains(gomock.Any(), managerID).Return(true, nil)
+	s.mPoolMock.EXPECT().Contains(gomock.Any(), managerID).Return(false, nil)
 	s.mLoadMock.EXPECT().CanManagerTakeProblem(gomock.Any(), managerID).
 		Return(false, nil)
 
@@ -143,7 +143,7 @@ func (s *UseCaseSuite) TestCanManagerTakeProblemPositiveResult() {
 	reqID := types.NewRequestID()
 	managerID := types.NewUserID()
 
-	s.mPoolMock.EXPECT().Contains(gomock.Any(), managerID).Return(true, nil)
+	s.mPoolMock.EXPECT().Contains(gomock.Any(), managerID).Return(false, nil)
 	s.mLoadMock.EXPECT().CanManagerTakeProblem(gomock.Any(), managerID).
 		Return(true, nil)
 

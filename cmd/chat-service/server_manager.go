@@ -14,6 +14,7 @@ import (
 	managerload "github.com/lapitskyss/chat-service/internal/services/manager-load"
 	managerpool "github.com/lapitskyss/chat-service/internal/services/manager-pool"
 	canreceiveproblems "github.com/lapitskyss/chat-service/internal/usecases/manager/can-receive-problems"
+	freehands "github.com/lapitskyss/chat-service/internal/usecases/manager/free-hands"
 )
 
 const nameServerManager = "server-manager"
@@ -41,9 +42,17 @@ func initServerManager(
 	if err != nil {
 		return nil, fmt.Errorf("canreceiveproblems usecase: %v", err)
 	}
+	freeHandsUserCase, err := freehands.New(freehands.NewOptions(
+		managerLoadSvc,
+		managerPool,
+	))
+	if err != nil {
+		return nil, fmt.Errorf("canreceiveproblems usecase: %v", err)
+	}
 
 	v1Handlers, err := managerv1.NewHandlers(managerv1.NewOptions(
 		canReceiveProblemUserCase,
+		freeHandsUserCase,
 	))
 	if err != nil {
 		return nil, fmt.Errorf("create v1 manager handlers: %v", err)

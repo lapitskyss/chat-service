@@ -23,6 +23,11 @@ const (
 	BearerAuthScopes = "bearerAuth.Scopes"
 )
 
+// Defines values for ErrorCode.
+const (
+	ErrorManagerOverloaded ErrorCode = 5000
+)
+
 // Error defines model for Error.
 type Error struct {
 	// Code contains HTTP error codes and specific business logic error codes (the last must be >= 1000).
@@ -32,11 +37,20 @@ type Error struct {
 }
 
 // ErrorCode contains HTTP error codes and specific business logic error codes (the last must be >= 1000).
-type ErrorCode = int
+type ErrorCode int
+
+// FreeHands defines model for FreeHands.
+type FreeHands = interface{}
 
 // FreeHandsBtnAvailability defines model for FreeHandsBtnAvailability.
 type FreeHandsBtnAvailability struct {
 	Available bool `json:"available"`
+}
+
+// FreeHandsResponse defines model for FreeHandsResponse.
+type FreeHandsResponse struct {
+	Data  *FreeHands `json:"data,omitempty"`
+	Error *Error     `json:"error,omitempty"`
 }
 
 // GetFreeHandsBtnAvailabilityResponse defines model for GetFreeHandsBtnAvailabilityResponse.
@@ -48,6 +62,11 @@ type GetFreeHandsBtnAvailabilityResponse struct {
 // XRequestIDHeader defines model for XRequestIDHeader.
 type XRequestIDHeader = types.RequestID
 
+// PostFreeHandsParams defines parameters for PostFreeHands.
+type PostFreeHandsParams struct {
+	XRequestID XRequestIDHeader `json:"X-Request-ID"`
+}
+
 // PostGetFreeHandsBtnAvailabilityParams defines parameters for PostGetFreeHandsBtnAvailability.
 type PostGetFreeHandsBtnAvailabilityParams struct {
 	XRequestID XRequestIDHeader `json:"X-Request-ID"`
@@ -56,6 +75,9 @@ type PostGetFreeHandsBtnAvailabilityParams struct {
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 
+	// (POST /freeHands)
+	PostFreeHands(ctx echo.Context, params PostFreeHandsParams) error
+
 	// (POST /getFreeHandsBtnAvailability)
 	PostGetFreeHandsBtnAvailability(ctx echo.Context, params PostGetFreeHandsBtnAvailabilityParams) error
 }
@@ -63,6 +85,39 @@ type ServerInterface interface {
 // ServerInterfaceWrapper converts echo contexts to parameters.
 type ServerInterfaceWrapper struct {
 	Handler ServerInterface
+}
+
+// PostFreeHands converts echo context to params.
+func (w *ServerInterfaceWrapper) PostFreeHands(ctx echo.Context) error {
+	var err error
+
+	ctx.Set(BearerAuthScopes, []string{})
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PostFreeHandsParams
+
+	headers := ctx.Request().Header
+	// ------------- Required header parameter "X-Request-ID" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Request-ID")]; found {
+		var XRequestID XRequestIDHeader
+		n := len(valueList)
+		if n != 1 {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Expected one value for X-Request-ID, got %d", n))
+		}
+
+		err = runtime.BindStyledParameterWithLocation("simple", false, "X-Request-ID", runtime.ParamLocationHeader, valueList[0], &XRequestID)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter X-Request-ID: %s", err))
+		}
+
+		params.XRequestID = XRequestID
+	} else {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Header parameter X-Request-ID is required, but not found"))
+	}
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.PostFreeHands(ctx, params)
+	return err
 }
 
 // PostGetFreeHandsBtnAvailability converts echo context to params.
@@ -126,6 +181,7 @@ func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL 
 		Handler: si,
 	}
 
+	router.POST(baseURL+"/freeHands", wrapper.PostFreeHands)
 	router.POST(baseURL+"/getFreeHandsBtnAvailability", wrapper.PostGetFreeHandsBtnAvailability)
 
 }
@@ -133,18 +189,20 @@ func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL 
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
+	"AwgAAA==",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file
