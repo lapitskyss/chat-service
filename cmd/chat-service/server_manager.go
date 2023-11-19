@@ -9,6 +9,7 @@ import (
 	keycloakclient "github.com/lapitskyss/chat-service/internal/clients/keycloak"
 	"github.com/lapitskyss/chat-service/internal/server"
 	servermanager "github.com/lapitskyss/chat-service/internal/server-manager"
+	managererrhandler "github.com/lapitskyss/chat-service/internal/server-manager/errhandler"
 	managerv1 "github.com/lapitskyss/chat-service/internal/server-manager/v1"
 	"github.com/lapitskyss/chat-service/internal/server/errhandler"
 	managerload "github.com/lapitskyss/chat-service/internal/services/manager-load"
@@ -58,7 +59,7 @@ func initServerManager(
 		return nil, fmt.Errorf("create v1 manager handlers: %v", err)
 	}
 
-	httpErrHandler, err := errhandler.New(errhandler.NewOptions(lg, productionMode, errhandler.ResponseBuilder))
+	httpErrHandler, err := errhandler.New(errhandler.NewOptions(lg, productionMode, managererrhandler.ResponseBuilder))
 	if err != nil {
 		return nil, fmt.Errorf("create errhandler: %v", err)
 	}

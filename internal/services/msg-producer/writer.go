@@ -12,7 +12,7 @@ func NewKafkaWriter(brokers []string, topic string, batchSize int) KafkaWriter {
 	return &kafka.Writer{
 		Addr:         kafka.TCP(brokers...),
 		Topic:        topic,
-		Balancer:     &kafka.Hash{},
+		Balancer:     &kafka.CRC32Balancer{},
 		BatchSize:    batchSize,
 		RequiredAcks: kafka.RequireOne,
 		Async:        false,

@@ -24,9 +24,9 @@ var (
 	// FailedJobsColumns holds the columns for the "failed_jobs" table.
 	FailedJobsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
-		{Name: "name", Type: field.TypeString},
-		{Name: "payload", Type: field.TypeString},
-		{Name: "reason", Type: field.TypeString},
+		{Name: "name", Type: field.TypeString, Size: 2147483647},
+		{Name: "payload", Type: field.TypeString, Size: 2147483647},
+		{Name: "reason", Type: field.TypeString, Size: 2147483647},
 		{Name: "created_at", Type: field.TypeTime},
 	}
 	// FailedJobsTable holds the schema information for the "failed_jobs" table.
@@ -38,8 +38,8 @@ var (
 	// JobsColumns holds the columns for the "jobs" table.
 	JobsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
-		{Name: "name", Type: field.TypeString},
-		{Name: "payload", Type: field.TypeString},
+		{Name: "name", Type: field.TypeString, Size: 2147483647},
+		{Name: "payload", Type: field.TypeString, Size: 2147483647},
 		{Name: "attempts", Type: field.TypeInt, Default: 0},
 		{Name: "available_at", Type: field.TypeTime},
 		{Name: "reserved_until", Type: field.TypeTime},
@@ -52,9 +52,9 @@ var (
 		PrimaryKey: []*schema.Column{JobsColumns[0]},
 		Indexes: []*schema.Index{
 			{
-				Name:    "job_reserved_until_available_at",
+				Name:    "job_available_at_reserved_until",
 				Unique:  false,
-				Columns: []*schema.Column{JobsColumns[5], JobsColumns[4]},
+				Columns: []*schema.Column{JobsColumns[4], JobsColumns[5]},
 			},
 		},
 	}

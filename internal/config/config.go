@@ -82,9 +82,9 @@ type ServicesConfig struct {
 }
 
 type MsgProducerConfig struct {
-	Brokers    []string `toml:"brokers" validate:"required,dive,hostname_port"`
+	Brokers    []string `toml:"brokers" validate:"min=1"`
 	Topic      string   `toml:"topic" validate:"required"`
-	BatchSize  int      `toml:"batch_size" validate:"required,min=1"`
+	BatchSize  int      `toml:"batch_size" validate:"min=1,max=1000"`
 	EncryptKey string   `toml:"encrypt_key" validate:"omitempty,hexadecimal"`
 }
 

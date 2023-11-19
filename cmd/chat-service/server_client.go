@@ -12,6 +12,7 @@ import (
 	problemsrepo "github.com/lapitskyss/chat-service/internal/repositories/problems"
 	"github.com/lapitskyss/chat-service/internal/server"
 	serverclient "github.com/lapitskyss/chat-service/internal/server-client"
+	clienterrhandler "github.com/lapitskyss/chat-service/internal/server-client/errhandler"
 	clientv1 "github.com/lapitskyss/chat-service/internal/server-client/v1"
 	"github.com/lapitskyss/chat-service/internal/server/errhandler"
 	"github.com/lapitskyss/chat-service/internal/services/outbox"
@@ -66,7 +67,7 @@ func initServerClient(
 		return nil, fmt.Errorf("create v1 handlers: %v", err)
 	}
 
-	httpErrHandler, err := errhandler.New(errhandler.NewOptions(lg, productionMode, errhandler.ResponseBuilder))
+	httpErrHandler, err := errhandler.New(errhandler.NewOptions(lg, productionMode, clienterrhandler.ResponseBuilder))
 	if err != nil {
 		return nil, fmt.Errorf("create errhandler: %v", err)
 	}

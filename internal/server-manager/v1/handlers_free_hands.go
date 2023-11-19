@@ -47,7 +47,7 @@ func (h Handlers) PostFreeHands(c echo.Context, params PostFreeHandsParams) erro
 			return ErrBadRequest("invalid request", err)
 		}
 		if errors.Is(err, freehands.ErrManagerOverloaded) {
-			return ErrServer(ErrorManagerOverloaded, "manager overloaded", err)
+			return ErrServer(ErrorCodeManagerOverloaded, "manager overloaded", err)
 		}
 		return fmt.Errorf("handle `free hands` use case: %v", err)
 	}

@@ -14,7 +14,7 @@ var ResponseBuilder = func(code int, msg string, details string) any {
 		Error: clientv1.Error{
 			Code:    clientv1.ErrorCode(code),
 			Message: msg,
-			Details: pointer.PtrWithZeroAsNil[string](details),
+			Details: pointer.PtrWithZeroAsNil(details),
 		},
 	}
 }

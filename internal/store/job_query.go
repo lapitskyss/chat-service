@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math"
 
-	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -23,7 +22,6 @@ type JobQuery struct {
 	order      []job.OrderOption
 	inters     []Interceptor
 	predicates []predicate.Job
-	modifiers  []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -345,9 +343,6 @@ func (jq *JobQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Job, err
 		nodes = append(nodes, node)
 		return node.assignValues(columns, values)
 	}
-	if len(jq.modifiers) > 0 {
-		_spec.Modifiers = jq.modifiers
-	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
 	}
@@ -362,9 +357,6 @@ func (jq *JobQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Job, err
 
 func (jq *JobQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := jq.querySpec()
-	if len(jq.modifiers) > 0 {
-		_spec.Modifiers = jq.modifiers
-	}
 	_spec.Node.Columns = jq.ctx.Fields
 	if len(jq.ctx.Fields) > 0 {
 		_spec.Unique = jq.ctx.Unique != nil && *jq.ctx.Unique
@@ -427,9 +419,6 @@ func (jq *JobQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if jq.ctx.Unique != nil && *jq.ctx.Unique {
 		selector.Distinct()
 	}
-	for _, m := range jq.modifiers {
-		m(selector)
-	}
 	for _, p := range jq.predicates {
 		p(selector)
 	}
@@ -445,32 +434,6 @@ func (jq *JobQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector.Limit(*limit)
 	}
 	return selector
-}
-
-// ForUpdate locks the selected rows against concurrent updates, and prevent them from being
-// updated, deleted or "selected ... for update" by other sessions, until the transaction is
-// either committed or rolled-back.
-func (jq *JobQuery) ForUpdate(opts ...sql.LockOption) *JobQuery {
-	if jq.driver.Dialect() == dialect.Postgres {
-		jq.Unique(false)
-	}
-	jq.modifiers = append(jq.modifiers, func(s *sql.Selector) {
-		s.ForUpdate(opts...)
-	})
-	return jq
-}
-
-// ForShare behaves similarly to ForUpdate, except that it acquires a shared mode lock
-// on any rows that are read. Other sessions can read the rows, but cannot modify them
-// until your transaction commits.
-func (jq *JobQuery) ForShare(opts ...sql.LockOption) *JobQuery {
-	if jq.driver.Dialect() == dialect.Postgres {
-		jq.Unique(false)
-	}
-	jq.modifiers = append(jq.modifiers, func(s *sql.Selector) {
-		s.ForShare(opts...)
-	})
-	return jq
 }
 
 // JobGroupBy is the group-by builder for Job entities.
