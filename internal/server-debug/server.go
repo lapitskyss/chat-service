@@ -25,8 +25,9 @@ const (
 
 //go:generate options-gen -out-filename=server_options.gen.go -from-struct=Options
 type Options struct {
-	addr          string      `option:"mandatory" validate:"required,hostname_port"`
-	clientSwagger *openapi3.T `option:"mandatory" validate:"required"`
+	addr           string      `option:"mandatory" validate:"required,hostname_port"`
+	clientSwagger  *openapi3.T `option:"mandatory" validate:"required"`
+	managerSwagger *openapi3.T `option:"mandatory" validate:"required"`
 }
 
 type Server struct {
@@ -60,6 +61,7 @@ func New(opts Options) (*Server, error) {
 	index.addPage("/debug/pprof/profile?seconds=30", "Take half-min profile")
 	index.addPage("/debug/error", "Debug Sentry error event")
 	index.addPage("/schema/client", "Get client OpenAPI specification")
+	index.addPage("/schema/manager", "Get manager OpenAPI specification")
 
 	e.GET("/", index.handler)
 	e.GET("/version", s.Version)
@@ -76,6 +78,7 @@ func New(opts Options) (*Server, error) {
 	e.PUT("/log/level", echo.WrapHandler(logger.Level))
 	e.GET("/debug/error", s.DebugError)
 	e.GET("/schema/client", s.ExposeSchema(opts.clientSwagger))
+	e.GET("/schema/manager", s.ExposeSchema(opts.managerSwagger))
 
 	return s, nil
 }

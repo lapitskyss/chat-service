@@ -1,12 +1,15 @@
 package config
 
+import "time"
+
 type Config struct {
-	Global  GlobalConfig  `toml:"global"`
-	Log     LogConfig     `toml:"log"`
-	Sentry  SentryConfig  `toml:"sentry"`
-	PSQL    PSQLConfig    `toml:"psql"`
-	Servers ServersConfig `toml:"servers"`
-	Clients ClientsConfig `toml:"clients"`
+	Global   GlobalConfig   `toml:"global"`
+	Log      LogConfig      `toml:"log"`
+	Sentry   SentryConfig   `toml:"sentry"`
+	PSQL     PSQLConfig     `toml:"psql"`
+	Servers  ServersConfig  `toml:"servers"`
+	Clients  ClientsConfig  `toml:"clients"`
+	Services ServicesConfig `toml:"services"`
 }
 
 type GlobalConfig struct {
@@ -34,8 +37,9 @@ type PSQLConfig struct {
 }
 
 type ServersConfig struct {
-	Debug  DebugServerConfig `toml:"debug"`
-	Client APIServerConfig   `toml:"client"`
+	Debug   DebugServerConfig `toml:"debug"`
+	Client  APIServerConfig   `toml:"client"`
+	Manager APIManagerConfig  `toml:"manager"`
 }
 
 type DebugServerConfig struct {
@@ -43,6 +47,12 @@ type DebugServerConfig struct {
 }
 
 type APIServerConfig struct {
+	Addr           string               `toml:"addr" validate:"required,hostname_port"`
+	AllowOrigins   []string             `toml:"allow_origins" validate:"required"`
+	RequiredAccess RequiredAccessConfig `toml:"required_access"`
+}
+
+type APIManagerConfig struct {
 	Addr           string               `toml:"addr" validate:"required,hostname_port"`
 	AllowOrigins   []string             `toml:"allow_origins" validate:"required"`
 	RequiredAccess RequiredAccessConfig `toml:"required_access"`
@@ -63,4 +73,27 @@ type KeycloakConfig struct {
 	ClientID     string `toml:"client_id" validate:"required"`
 	ClientSecret string `toml:"client_secret" validate:"required,alphanum"`
 	DebugMode    bool   `toml:"debug_mode"`
+}
+
+type ServicesConfig struct {
+	MsgProducer MsgProducerConfig `toml:"msg_producer"`
+	Outbox      OutboxConfig      `toml:"outbox"`
+	ManagerLoad ManagerLoadConfig `toml:"manager_load"`
+}
+
+type MsgProducerConfig struct {
+	Brokers    []string `toml:"brokers" validate:"required,dive,hostname_port"`
+	Topic      string   `toml:"topic" validate:"required"`
+	BatchSize  int      `toml:"batch_size" validate:"required,min=1"`
+	EncryptKey string   `toml:"encrypt_key" validate:"omitempty,hexadecimal"`
+}
+
+type OutboxConfig struct {
+	Workers    int           `toml:"workers" validate:"min=1,max=32"`
+	IdleTime   time.Duration `toml:"idle_time" validate:"min=100ms,max=10s"`
+	ReserveFor time.Duration `toml:"reserve_for" validate:"min=1s,max=10m"`
+}
+
+type ManagerLoadConfig struct {
+	MaxProblemsAtTime int `toml:"max_problems_at_same_time" validate:"min=1,max=30"`
 }

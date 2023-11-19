@@ -17,10 +17,17 @@ import (
 	"github.com/lapitskyss/chat-service/internal/config"
 	"github.com/lapitskyss/chat-service/internal/logger"
 	chatsrepo "github.com/lapitskyss/chat-service/internal/repositories/chats"
+	jobsrepo "github.com/lapitskyss/chat-service/internal/repositories/jobs"
 	messagesrepo "github.com/lapitskyss/chat-service/internal/repositories/messages"
 	problemsrepo "github.com/lapitskyss/chat-service/internal/repositories/problems"
 	clientv1 "github.com/lapitskyss/chat-service/internal/server-client/v1"
 	serverdebug "github.com/lapitskyss/chat-service/internal/server-debug"
+	managerv1 "github.com/lapitskyss/chat-service/internal/server-manager/v1"
+	managerload "github.com/lapitskyss/chat-service/internal/services/manager-load"
+	inmemmanagerpool "github.com/lapitskyss/chat-service/internal/services/manager-pool/in-mem"
+	msgproducer "github.com/lapitskyss/chat-service/internal/services/msg-producer"
+	"github.com/lapitskyss/chat-service/internal/services/outbox"
+	sendclientmessagejob "github.com/lapitskyss/chat-service/internal/services/outbox/jobs/send-client-message"
 	"github.com/lapitskyss/chat-service/internal/store"
 )
 
@@ -105,11 +112,70 @@ func run() (errReturned error) {
 	if err != nil {
 		return fmt.Errorf("messages repository: %v", err)
 	}
+	jobsRepo, err := jobsrepo.New(jobsrepo.NewOptions(db))
+	if err != nil {
+		return fmt.Errorf("jobs repository: %v", err)
+	}
+
+	// Services
+	msgProducer, err := msgproducer.New(msgproducer.NewOptions(
+		msgproducer.NewKafkaWriter(
+			cfg.Services.MsgProducer.Brokers,
+			cfg.Services.MsgProducer.Topic,
+			cfg.Services.MsgProducer.BatchSize,
+		),
+		msgproducer.WithEncryptKey(cfg.Services.MsgProducer.EncryptKey),
+	))
+	if err != nil {
+		return fmt.Errorf("message producer service: %v", err)
+	}
+
+	outBox, err := outbox.New(outbox.NewOptions(
+		cfg.Services.Outbox.Workers,
+		cfg.Services.Outbox.IdleTime,
+		cfg.Services.Outbox.ReserveFor,
+		jobsRepo,
+		db,
+	))
+	if err != nil {
+		return fmt.Errorf("outbox service: %v", err)
+	}
+
+	sendClientMessageJob, err := sendclientmessagejob.New(sendclientmessagejob.NewOptions(
+		msgProducer,
+		msgRepo,
+	))
+	if err != nil {
+		return fmt.Errorf("send client message job: %v", err)
+	}
+	err = outBox.RegisterJob(sendClientMessageJob)
+	if err != nil {
+		return fmt.Errorf("register send client message job: %v", err)
+	}
+
+	err = outBox.Run(ctx)
+	if err != nil {
+		return fmt.Errorf("run outbox: %v", err)
+	}
+
+	managerLoad, err := managerload.New(managerload.NewOptions(
+		cfg.Services.ManagerLoad.MaxProblemsAtTime,
+		problemRepo,
+	))
+	if err != nil {
+		return fmt.Errorf("manager load service: %v", err)
+	}
+
+	managerPool := inmemmanagerpool.New()
 
 	// Servers.
 	clientV1Swagger, err := clientv1.GetSwagger()
 	if err != nil {
 		return fmt.Errorf("get client v1 swagger: %v", err)
+	}
+	managerV1Swagger, err := managerv1.GetSwagger()
+	if err != nil {
+		return fmt.Errorf("get manager v1 swagger: %v", err)
 	}
 
 	srvClient, err := initServerClient(
@@ -124,14 +190,31 @@ func run() (errReturned error) {
 		chatRepo,
 		msgRepo,
 		problemRepo,
+		outBox,
 	)
 	if err != nil {
 		return fmt.Errorf("init client server: %v", err)
 	}
 
+	srvManager, err := initServerManager(
+		cfg.Global.IsProd(),
+		cfg.Servers.Manager.Addr,
+		cfg.Servers.Manager.AllowOrigins,
+		managerV1Swagger,
+		kc,
+		cfg.Servers.Manager.RequiredAccess.Resource,
+		cfg.Servers.Manager.RequiredAccess.Role,
+		managerLoad,
+		managerPool,
+	)
+	if err != nil {
+		return fmt.Errorf("init manager server: %v", err)
+	}
+
 	srvDebug, err := serverdebug.New(serverdebug.NewOptions(
 		cfg.Servers.Debug.Addr,
 		clientV1Swagger,
+		managerV1Swagger,
 	))
 	if err != nil {
 		return fmt.Errorf("init debug server: %v", err)
@@ -141,6 +224,7 @@ func run() (errReturned error) {
 
 	// Run servers.
 	eg.Go(func() error { return srvClient.Run(ctx) })
+	eg.Go(func() error { return srvManager.Run(ctx) })
 	eg.Go(func() error { return srvDebug.Run(ctx) })
 
 	if err = eg.Wait(); err != nil && !errors.Is(err, context.Canceled) {

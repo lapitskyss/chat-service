@@ -21,6 +21,12 @@ allow_origins = ["http://localhost:3011", "http://localhost:3000"]
 [servers.client.required_access]
 resource = "chat-ui-client"
 role = "support-chat-client"
+[servers.manager]
+addr = ":8081"
+allow_origins = ["http://localhost:3011", "http://localhost:3001"]
+[servers.manager.required_access]
+resource = "chat-ui-manager"
+role = "support-chat-manager"
 [servers.debug]
 addr = ":8079"
 
@@ -31,3 +37,16 @@ realm = "Bank"
 client_id = "chat-service"
 client_secret = "secret"
 debug_mode = false
+
+[services]
+[services.msg_producer]
+brokers = ["localhost:9092"]
+topic = "chat.messages"
+batch_size = 1
+encrypt_key = "" # Leave it blank to disable encryption.
+[services.outbox]
+workers = 2
+idle_time = "1s"
+reserve_for = "5m"
+[services.manager_load]
+max_problems_at_same_time = 5

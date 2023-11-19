@@ -9,7 +9,7 @@ import (
 )
 
 type Types interface {
-	ChatID | ProblemID | MessageID | UserID | RequestID
+	ChatID | ProblemID | MessageID | UserID | RequestID | JobID | FailedJobID
 }
 
 func Parse[T Types](s string) (T, error) {
@@ -254,4 +254,98 @@ func (r RequestID) Matches(x any) bool {
 
 func (r RequestID) IsZero() bool {
 	return r == RequestIDNil
+}
+
+type JobID uuid.UUID
+
+var JobIDNil = JobID(uuid.Nil)
+
+func NewJobID() JobID {
+	return JobID(uuid.New())
+}
+
+func (r JobID) String() string {
+	return uuid.UUID(r).String()
+}
+
+func (r JobID) Value() (driver.Value, error) {
+	return r.String(), nil
+}
+
+func (r *JobID) Scan(src any) error {
+	return (*uuid.UUID)(r).Scan(src)
+}
+
+func (r JobID) MarshalText() ([]byte, error) {
+	return uuid.UUID(r).MarshalText()
+}
+
+func (r *JobID) UnmarshalText(data []byte) error {
+	return (*uuid.UUID)(r).UnmarshalText(data)
+}
+
+func (r JobID) Validate() error {
+	if r.IsZero() {
+		return errors.New("zero JobID")
+	}
+	return nil
+}
+
+func (r JobID) Matches(x any) bool {
+	v, ok := x.(JobID)
+	if !ok {
+		return false
+	}
+	return r == v
+}
+
+func (r JobID) IsZero() bool {
+	return r == JobIDNil
+}
+
+type FailedJobID uuid.UUID
+
+var FailedJobIDNil = FailedJobID(uuid.Nil)
+
+func NewFailedJobID() FailedJobID {
+	return FailedJobID(uuid.New())
+}
+
+func (r FailedJobID) String() string {
+	return uuid.UUID(r).String()
+}
+
+func (r FailedJobID) Value() (driver.Value, error) {
+	return r.String(), nil
+}
+
+func (r *FailedJobID) Scan(src any) error {
+	return (*uuid.UUID)(r).Scan(src)
+}
+
+func (r FailedJobID) MarshalText() ([]byte, error) {
+	return uuid.UUID(r).MarshalText()
+}
+
+func (r *FailedJobID) UnmarshalText(data []byte) error {
+	return (*uuid.UUID)(r).UnmarshalText(data)
+}
+
+func (r FailedJobID) Validate() error {
+	if r.IsZero() {
+		return errors.New("zero FailedJobID")
+	}
+	return nil
+}
+
+func (r FailedJobID) Matches(x any) bool {
+	v, ok := x.(FailedJobID)
+	if !ok {
+		return false
+	}
+	return r == v
+}
+
+func (r FailedJobID) IsZero() bool {
+	return r == FailedJobIDNil
 }

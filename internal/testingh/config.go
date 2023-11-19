@@ -21,6 +21,8 @@ type config struct {
 	PostgresPassword string `envconfig:"PSQL_PASSWORD" validate:"required"`
 	PostgresDebug    bool   `envconfig:"PSQL_DEBUG" default:"false"`
 
+	KafkaAddress string `envconfig:"KAFKA_ADDRESS" default:"localhost:9092" validate:"required,hostname_port"`
+
 	KeycloakBasePath     string `envconfig:"KEYCLOAK_BASE_PATH" default:"http://localhost:3010" validate:"required,url"`
 	KeycloakRealm        string `envconfig:"KEYCLOAK_REALM" default:"Testing" validate:"required"`
 	KeycloakClientID     string `envconfig:"KEYCLOAK_CLIENT_ID" validate:"required"`

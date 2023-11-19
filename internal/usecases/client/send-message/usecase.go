@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	messagesrepo "github.com/lapitskyss/chat-service/internal/repositories/messages"
+	sendclientmessagejob "github.com/lapitskyss/chat-service/internal/services/outbox/jobs/send-client-message"
 	"github.com/lapitskyss/chat-service/internal/types"
 )
 
@@ -41,10 +43,15 @@ type transactor interface {
 	RunInTx(ctx context.Context, f func(context.Context) error) error
 }
 
+type outboxService interface {
+	Put(ctx context.Context, name, payload string, availableAt time.Time) (types.JobID, error)
+}
+
 //go:generate options-gen -out-filename=usecase_options.gen.go -from-struct=Options
 type Options struct {
 	chatRepo    chatsRepository    `option:"mandatory" validate:"required"`
 	msgRepo     messagesRepository `option:"mandatory" validate:"required"`
+	outBoxSvc   outboxService      `option:"mandatory" validate:"required"`
 	problemRepo problemsRepository `option:"mandatory" validate:"required"`
 	tr          transactor         `option:"mandatory" validate:"required"`
 }
@@ -87,6 +94,14 @@ func (u UseCase) Handle(ctx context.Context, req Request) (Response, error) {
 		msg, err = u.msgRepo.CreateClientVisible(ctx, req.ID, problemID, chatID, req.ClientID, req.MessageBody)
 		if err != nil {
 			return fmt.Errorf("message repo: %v", err)
+		}
+		payload, err := sendclientmessagejob.MarshalPayload(msg.ID)
+		if err != nil {
+			return fmt.Errorf("marshal message id: %v", err)
+		}
+		_, err = u.outBoxSvc.Put(ctx, sendclientmessagejob.Name, payload, time.Time{})
+		if err != nil {
+			return fmt.Errorf("put outbox message: %v", err)
 		}
 		return nil
 	})

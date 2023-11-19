@@ -11,6 +11,7 @@ package sendmessagemocks
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	messagesrepo "github.com/lapitskyss/chat-service/internal/repositories/messages"
 	types "github.com/lapitskyss/chat-service/internal/types"
@@ -181,4 +182,42 @@ func (m *Mocktransactor) RunInTx(ctx context.Context, f func(context.Context) er
 func (mr *MocktransactorMockRecorder) RunInTx(ctx, f any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunInTx", reflect.TypeOf((*Mocktransactor)(nil).RunInTx), ctx, f)
+}
+
+// MockoutboxService is a mock of outboxService interface.
+type MockoutboxService struct {
+	ctrl     *gomock.Controller
+	recorder *MockoutboxServiceMockRecorder
+}
+
+// MockoutboxServiceMockRecorder is the mock recorder for MockoutboxService.
+type MockoutboxServiceMockRecorder struct {
+	mock *MockoutboxService
+}
+
+// NewMockoutboxService creates a new mock instance.
+func NewMockoutboxService(ctrl *gomock.Controller) *MockoutboxService {
+	mock := &MockoutboxService{ctrl: ctrl}
+	mock.recorder = &MockoutboxServiceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockoutboxService) EXPECT() *MockoutboxServiceMockRecorder {
+	return m.recorder
+}
+
+// Put mocks base method.
+func (m *MockoutboxService) Put(ctx context.Context, name, payload string, availableAt time.Time) (types.JobID, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Put", ctx, name, payload, availableAt)
+	ret0, _ := ret[0].(types.JobID)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Put indicates an expected call of Put.
+func (mr *MockoutboxServiceMockRecorder) Put(ctx, name, payload, availableAt any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Put", reflect.TypeOf((*MockoutboxService)(nil).Put), ctx, name, payload, availableAt)
 }

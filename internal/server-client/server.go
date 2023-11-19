@@ -1,11 +1,8 @@
 package serverclient
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	oapimdlwr "github.com/deepmap/oapi-codegen/pkg/middleware"
 	"github.com/getkin/kin-openapi/openapi3"
@@ -13,15 +10,10 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/lapitskyss/chat-service/internal/middlewares"
+	"github.com/lapitskyss/chat-service/internal/server"
 	clientv1 "github.com/lapitskyss/chat-service/internal/server-client/v1"
-)
-
-const (
-	readHeaderTimeout = time.Second
-	shutdownTimeout   = 3 * time.Second
 )
 
 //go:generate options-gen -out-filename=server_options.gen.go -from-struct=Options
@@ -37,12 +29,7 @@ type Options struct {
 	httpErrorHandler echo.HTTPErrorHandler    `option:"mandatory" validate:"required"`
 }
 
-type Server struct {
-	lg  *zap.Logger
-	srv *http.Server
-}
-
-func New(opts Options) (*Server, error) {
+func New(opts Options) (*server.Server, error) {
 	if err := opts.Validate(); err != nil {
 		return nil, fmt.Errorf("validate options: %v", err)
 	}
@@ -68,36 +55,5 @@ func New(opts Options) (*Server, error) {
 	}))
 	clientv1.RegisterHandlers(v1, opts.v1Handlers)
 
-	return &Server{
-		lg: opts.logger,
-		srv: &http.Server{
-			Addr:              opts.addr,
-			Handler:           e,
-			ReadHeaderTimeout: readHeaderTimeout,
-		},
-	}, nil
-}
-
-func (s *Server) Run(ctx context.Context) error {
-	eg, ctx := errgroup.WithContext(ctx)
-
-	eg.Go(func() error {
-		<-ctx.Done()
-
-		ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
-		defer cancel()
-
-		return s.srv.Shutdown(ctx)
-	})
-
-	eg.Go(func() error {
-		s.lg.Info("listen and serve", zap.String("addr", s.srv.Addr))
-
-		if err := s.srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			return fmt.Errorf("listen and serve: %v", err)
-		}
-		return nil
-	})
-
-	return eg.Wait()
+	return server.New(server.NewOptions(opts.logger, opts.addr, e))
 }
