@@ -49,12 +49,14 @@ type DebugServerConfig struct {
 type APIServerConfig struct {
 	Addr           string               `toml:"addr" validate:"required,hostname_port"`
 	AllowOrigins   []string             `toml:"allow_origins" validate:"required"`
+	SecWsProtocol  string               `toml:"sec_ws_protocol" validate:"required"`
 	RequiredAccess RequiredAccessConfig `toml:"required_access"`
 }
 
 type APIManagerConfig struct {
 	Addr           string               `toml:"addr" validate:"required,hostname_port"`
 	AllowOrigins   []string             `toml:"allow_origins" validate:"required"`
+	SecWsProtocol  string               `toml:"sec_ws_protocol" validate:"required"`
 	RequiredAccess RequiredAccessConfig `toml:"required_access"`
 }
 

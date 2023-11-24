@@ -14,19 +14,22 @@ import (
 	"github.com/lapitskyss/chat-service/internal/middlewares"
 	"github.com/lapitskyss/chat-service/internal/server"
 	managerv1 "github.com/lapitskyss/chat-service/internal/server-manager/v1"
+	websocketstream "github.com/lapitskyss/chat-service/internal/websocket-stream"
 )
 
 //go:generate options-gen -out-filename=server_options.gen.go -from-struct=Options
 type Options struct {
-	logger           *zap.Logger               `option:"mandatory" validate:"required"`
-	addr             string                    `option:"mandatory" validate:"required,hostname_port"`
-	allowOrigins     []string                  `option:"mandatory" validate:"min=1"`
-	introspector     middlewares.Introspector  `option:"mandatory" validate:"required"`
-	requiredResource string                    `option:"mandatory" validate:"required"`
-	requiredRole     string                    `option:"mandatory" validate:"required"`
-	v1Swagger        *openapi3.T               `option:"mandatory" validate:"required"`
-	v1Handlers       managerv1.ServerInterface `option:"mandatory" validate:"required"`
-	httpErrorHandler echo.HTTPErrorHandler     `option:"mandatory" validate:"required"`
+	logger           *zap.Logger                  `option:"mandatory" validate:"required"`
+	addr             string                       `option:"mandatory" validate:"required,hostname_port"`
+	allowOrigins     []string                     `option:"mandatory" validate:"min=1"`
+	introspector     middlewares.Introspector     `option:"mandatory" validate:"required"`
+	requiredResource string                       `option:"mandatory" validate:"required"`
+	requiredRole     string                       `option:"mandatory" validate:"required"`
+	v1Swagger        *openapi3.T                  `option:"mandatory" validate:"required"`
+	v1Handlers       managerv1.ServerInterface    `option:"mandatory" validate:"required"`
+	wsHandler        *websocketstream.HTTPHandler `option:"mandatory" validate:"required"`
+	httpErrorHandler echo.HTTPErrorHandler        `option:"mandatory" validate:"required"`
+	cancelFn         func()                       `option:"mandatory" validate:"-"`
 }
 
 func New(opts Options) (*server.Server, error) {
@@ -55,5 +58,7 @@ func New(opts Options) (*server.Server, error) {
 	}))
 	managerv1.RegisterHandlers(v1, opts.v1Handlers)
 
-	return server.New(server.NewOptions(opts.logger, opts.addr, e))
+	e.GET("/ws", opts.wsHandler.Serve)
+
+	return server.New(server.NewOptions(opts.logger, opts.addr, e, opts.cancelFn))
 }

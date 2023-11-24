@@ -18,12 +18,14 @@ debug=true
 [servers.client]
 addr = ":8080"
 allow_origins = ["http://localhost:3011", "http://localhost:3000"]
+sec_ws_protocol = "chat-service-protocol"
 [servers.client.required_access]
 resource = "chat-ui-client"
 role = "support-chat-client"
 [servers.manager]
 addr = ":8081"
 allow_origins = ["http://localhost:3011", "http://localhost:3001"]
+sec_ws_protocol = "chat-service-protocol"
 [servers.manager.required_access]
 resource = "chat-ui-manager"
 role = "support-chat-manager"

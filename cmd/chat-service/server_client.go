@@ -19,6 +19,7 @@ import (
 	"github.com/lapitskyss/chat-service/internal/store"
 	gethistory "github.com/lapitskyss/chat-service/internal/usecases/client/get-history"
 	sendmessage "github.com/lapitskyss/chat-service/internal/usecases/client/send-message"
+	websocketstream "github.com/lapitskyss/chat-service/internal/websocket-stream"
 )
 
 const nameServerClient = "server-client"
@@ -28,6 +29,7 @@ func initServerClient(
 
 	addr string,
 	allowOrigins []string,
+	secWsProtocol string,
 	v1Swagger *openapi3.T,
 
 	keycloak *keycloakclient.Client,
@@ -67,6 +69,24 @@ func initServerClient(
 		return nil, fmt.Errorf("create v1 handlers: %v", err)
 	}
 
+	shutdownCh := make(chan struct{})
+	cancelFn := func() {
+		close(shutdownCh)
+	}
+
+	wsUpgrader := websocketstream.NewUpgrader(allowOrigins, secWsProtocol)
+	wsHandler, err := websocketstream.NewHTTPHandler(websocketstream.NewOptions(
+		lg,
+		dummyEventStream{},
+		dummyAdapter{},
+		websocketstream.JSONEventWriter{},
+		wsUpgrader,
+		shutdownCh,
+	))
+	if err != nil {
+		return nil, fmt.Errorf("websock etstream handler: %v", err)
+	}
+
 	httpErrHandler, err := errhandler.New(errhandler.NewOptions(lg, productionMode, clienterrhandler.ResponseBuilder))
 	if err != nil {
 		return nil, fmt.Errorf("create errhandler: %v", err)
@@ -81,7 +101,9 @@ func initServerClient(
 		requiredRole,
 		v1Swagger,
 		v1Handlers,
+		wsHandler,
 		httpErrHandler.Handle,
+		cancelFn,
 	))
 	if err != nil {
 		return nil, fmt.Errorf("build server: %v", err)

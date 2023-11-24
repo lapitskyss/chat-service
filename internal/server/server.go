@@ -18,14 +18,16 @@ const (
 
 //go:generate options-gen -out-filename=server_options.gen.go -from-struct=Options
 type Options struct {
-	logger  *zap.Logger  `option:"mandatory" validate:"required"`
-	addr    string       `option:"mandatory" validate:"required,hostname_port"`
-	handler http.Handler `option:"mandatory"`
+	logger   *zap.Logger  `option:"mandatory" validate:"required"`
+	addr     string       `option:"mandatory" validate:"required,hostname_port"`
+	handler  http.Handler `option:"mandatory" validate:"-"`
+	cancelFn func()       `option:"mandatory" validate:"-"`
 }
 
 type Server struct {
-	lg  *zap.Logger
-	srv *http.Server
+	lg       *zap.Logger
+	srv      *http.Server
+	cancelFn func()
 }
 
 func New(opts Options) (*Server, error) {
@@ -40,6 +42,7 @@ func New(opts Options) (*Server, error) {
 			Handler:           opts.handler,
 			ReadHeaderTimeout: readHeaderTimeout,
 		},
+		cancelFn: opts.cancelFn,
 	}, nil
 }
 
@@ -48,6 +51,8 @@ func (s *Server) Run(ctx context.Context) error {
 
 	eg.Go(func() error {
 		<-ctx.Done()
+
+		s.cancelFn()
 
 		ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 		defer cancel()

@@ -23,12 +23,14 @@ import (
 	clientv1 "github.com/lapitskyss/chat-service/internal/server-client/v1"
 	serverdebug "github.com/lapitskyss/chat-service/internal/server-debug"
 	managerv1 "github.com/lapitskyss/chat-service/internal/server-manager/v1"
+	eventstream "github.com/lapitskyss/chat-service/internal/services/event-stream"
 	managerload "github.com/lapitskyss/chat-service/internal/services/manager-load"
 	inmemmanagerpool "github.com/lapitskyss/chat-service/internal/services/manager-pool/in-mem"
 	msgproducer "github.com/lapitskyss/chat-service/internal/services/msg-producer"
 	"github.com/lapitskyss/chat-service/internal/services/outbox"
 	sendclientmessagejob "github.com/lapitskyss/chat-service/internal/services/outbox/jobs/send-client-message"
 	"github.com/lapitskyss/chat-service/internal/store"
+	"github.com/lapitskyss/chat-service/internal/types"
 )
 
 var configPath = flag.String("config", "configs/config.toml", "Path to config file")
@@ -182,6 +184,7 @@ func run() (errReturned error) {
 		cfg.Global.IsProd(),
 		cfg.Servers.Client.Addr,
 		cfg.Servers.Client.AllowOrigins,
+		cfg.Servers.Client.SecWsProtocol,
 		clientV1Swagger,
 		kc,
 		cfg.Servers.Client.RequiredAccess.Resource,
@@ -200,6 +203,7 @@ func run() (errReturned error) {
 		cfg.Global.IsProd(),
 		cfg.Servers.Manager.Addr,
 		cfg.Servers.Manager.AllowOrigins,
+		cfg.Servers.Manager.SecWsProtocol,
 		managerV1Swagger,
 		kc,
 		cfg.Servers.Manager.RequiredAccess.Resource,
@@ -232,4 +236,21 @@ func run() (errReturned error) {
 	}
 
 	return nil
+}
+
+type dummyAdapter struct{}
+
+func (dummyAdapter) Adapt(event eventstream.Event) (any, error) {
+	return event, nil
+}
+
+type dummyEventStream struct{}
+
+func (dummyEventStream) Subscribe(ctx context.Context, _ types.UserID) (<-chan eventstream.Event, error) {
+	events := make(chan eventstream.Event)
+	go func() {
+		defer close(events)
+		<-ctx.Done()
+	}()
+	return events, nil
 }
