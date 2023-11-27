@@ -13,8 +13,10 @@ import (
 	"github.com/lapitskyss/chat-service/internal/server"
 	serverclient "github.com/lapitskyss/chat-service/internal/server-client"
 	clienterrhandler "github.com/lapitskyss/chat-service/internal/server-client/errhandler"
+	clientevents "github.com/lapitskyss/chat-service/internal/server-client/events"
 	clientv1 "github.com/lapitskyss/chat-service/internal/server-client/v1"
 	"github.com/lapitskyss/chat-service/internal/server/errhandler"
+	eventstream "github.com/lapitskyss/chat-service/internal/services/event-stream"
 	"github.com/lapitskyss/chat-service/internal/services/outbox"
 	"github.com/lapitskyss/chat-service/internal/store"
 	gethistory "github.com/lapitskyss/chat-service/internal/usecases/client/get-history"
@@ -41,6 +43,7 @@ func initServerClient(
 	msgRepo *messagesrepo.Repo,
 	problemRepo *problemsrepo.Repo,
 
+	eventStream eventstream.EventStream,
 	outboxSvc *outbox.Service,
 ) (*server.Server, error) {
 	lg := zap.L().Named(nameServerClient)
@@ -77,8 +80,8 @@ func initServerClient(
 	wsUpgrader := websocketstream.NewUpgrader(allowOrigins, secWsProtocol)
 	wsHandler, err := websocketstream.NewHTTPHandler(websocketstream.NewOptions(
 		lg,
-		dummyEventStream{},
-		dummyAdapter{},
+		eventStream,
+		clientevents.Adapter{},
 		websocketstream.JSONEventWriter{},
 		wsUpgrader,
 		shutdownCh,

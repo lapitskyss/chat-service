@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	messagesrepo "github.com/lapitskyss/chat-service/internal/repositories/messages"
+	eventstream "github.com/lapitskyss/chat-service/internal/services/event-stream"
 	msgproducer "github.com/lapitskyss/chat-service/internal/services/msg-producer"
 	"github.com/lapitskyss/chat-service/internal/services/outbox"
 	"github.com/lapitskyss/chat-service/internal/types"
@@ -22,10 +23,15 @@ type messageRepository interface {
 	GetMessageByID(ctx context.Context, msgID types.MessageID) (*messagesrepo.Message, error)
 }
 
+type eventStream interface {
+	Publish(ctx context.Context, userID types.UserID, event eventstream.Event) error
+}
+
 //go:generate options-gen -out-filename=job_options.gen.go -from-struct=Options
 type Options struct {
 	msgProducer messageProducer   `option:"mandatory" validate:"required"`
 	msgRepo     messageRepository `option:"mandatory" validate:"required"`
+	eventStream eventStream       `option:"mandatory" validate:"required"`
 }
 
 type Job struct {
@@ -65,6 +71,21 @@ func (j *Job) Handle(ctx context.Context, payload string) error {
 	err = j.msgProducer.ProduceMessage(ctx, produceMsg)
 	if err != nil {
 		return fmt.Errorf("message producer, produce message: %v", err)
+	}
+
+	event := eventstream.NewNewMessageEvent(
+		types.NewEventID(),
+		message.RequestID,
+		message.ChatID,
+		message.ID,
+		message.AuthorID,
+		message.CreatedAt,
+		message.Body,
+		message.IsService,
+	)
+	err = j.eventStream.Publish(ctx, message.AuthorID, event)
+	if err != nil {
+		return fmt.Errorf("event stream, publish event: %v", err)
 	}
 
 	return nil

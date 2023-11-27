@@ -2,6 +2,7 @@ package websocketstream
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -91,15 +92,9 @@ func (h *HTTPHandler) Serve(c echo.Context) error {
 func (h *HTTPHandler) readLoop(_ context.Context, ws Websocket) error {
 	pongDeadline := 2 * h.pingPeriod
 
-	err := ws.SetReadDeadline(time.Now().Add(pongDeadline))
-	if err != nil {
-		return fmt.Errorf("set read deadline: %v", err)
-	}
+	_ = ws.SetReadDeadline(time.Now().Add(pongDeadline))
 	ws.SetPongHandler(func(string) error {
-		err := ws.SetReadDeadline(time.Now().Add(pongDeadline))
-		if err != nil {
-			return fmt.Errorf("set read deadline: %v", err)
-		}
+		_ = ws.SetReadDeadline(time.Now().Add(pongDeadline))
 
 		h.logger.Debug("pong")
 
@@ -107,8 +102,11 @@ func (h *HTTPHandler) readLoop(_ context.Context, ws Websocket) error {
 	})
 
 	for {
-		_, _, err = ws.NextReader()
+		_, _, err := ws.NextReader()
 		if err != nil {
+			if websocket.IsCloseError(err, websocket.CloseNoStatusReceived) {
+				return nil
+			}
 			return fmt.Errorf("read next message: %v", err)
 		}
 	}
@@ -144,6 +142,9 @@ func (h *HTTPHandler) writePing(ws Websocket) error {
 	}
 	err = ws.WriteMessage(websocket.PingMessage, nil)
 	if err != nil {
+		if errors.Is(err, websocket.ErrCloseSent) {
+			return nil
+		}
 		return fmt.Errorf("send ping msg: %v", err)
 	}
 
@@ -160,6 +161,9 @@ func (h *HTTPHandler) writeEvent(ws Websocket, event eventstream.Event) error {
 
 	w, err := ws.NextWriter(websocket.TextMessage)
 	if err != nil {
+		if errors.Is(err, websocket.ErrCloseSent) {
+			return nil
+		}
 		return fmt.Errorf("get next writer: %v", err)
 	}
 
@@ -170,6 +174,9 @@ func (h *HTTPHandler) writeEvent(ws Websocket, event eventstream.Event) error {
 
 	err = h.eventWriter.Write(result, w)
 	if err != nil {
+		if errors.Is(err, websocket.ErrCloseSent) {
+			return nil
+		}
 		return fmt.Errorf("write event: %v", err)
 	}
 

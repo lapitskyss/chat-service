@@ -15,16 +15,17 @@ type Client struct {
 	ctx context.Context
 	ch  chan eventstream.Event
 
-	userID  types.UserID
-	eventID types.EventID
+	id     types.EventClientID
+	userID types.UserID
 }
 
 func (c *Clients) Add(ctx context.Context, userID types.UserID) *Client {
 	client := &Client{
-		ctx:     ctx,
-		ch:      make(chan eventstream.Event, 16),
-		eventID: types.NewEventID(),
-		userID:  userID,
+		ctx: ctx,
+		ch:  make(chan eventstream.Event, 1024),
+
+		id:     types.NewEventClientID(),
+		userID: userID,
 	}
 
 	c.items[userID] = append(c.items[userID], client)
@@ -43,7 +44,7 @@ func (c *Clients) Remove(client *Client) {
 	}
 
 	for i := 0; i < len(clients); i++ {
-		if clients[i].eventID == client.eventID {
+		if clients[i].id == client.id {
 			c.items[client.userID] = remove(clients, i)
 			close(client.ch)
 		}

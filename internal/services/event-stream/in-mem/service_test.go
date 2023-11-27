@@ -130,22 +130,22 @@ func (s *ServiceSuite) TestPublishInvalidEvent() {
 }
 
 func (s *ServiceSuite) TestPublishWithoutSubscribers() {
-	// s.Run("no subscriptions at all", func() {
-	//	err := s.stream.Publish(s.Ctx, types.NewUserID(), newMessageEvent("Hello"))
-	//	s.Require().NoError(err)
-	// })
-	//
-	// s.Run("publish to offline client", func() {
-	//	uid1, uid2 := types.NewUserID(), types.NewUserID()
-	//
-	//	// uid1 is online.
-	//	_, err := s.stream.Subscribe(s.Ctx, uid1)
-	//	s.Require().NoError(err)
-	//
-	//	// uid2 is offline.
-	//	err = s.stream.Publish(s.Ctx, uid2, newMessageEvent("No panic"))
-	//	s.Require().NoError(err)
-	//})
+	s.Run("no subscriptions at all", func() {
+		err := s.stream.Publish(s.Ctx, types.NewUserID(), newMessageEvent("Hello"))
+		s.Require().NoError(err)
+	})
+
+	s.Run("publish to offline client", func() {
+		uid1, uid2 := types.NewUserID(), types.NewUserID()
+
+		// uid1 is online.
+		_, err := s.stream.Subscribe(s.Ctx, uid1)
+		s.Require().NoError(err)
+
+		// uid2 is offline.
+		err = s.stream.Publish(s.Ctx, uid2, newMessageEvent("No panic"))
+		s.Require().NoError(err)
+	})
 
 	s.Run("client was online and became offline", func() {
 		// Arrange.

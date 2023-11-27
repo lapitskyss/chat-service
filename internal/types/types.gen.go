@@ -9,7 +9,7 @@ import (
 )
 
 type Types interface {
-	ChatID | EventID | FailedJobID | JobID | MessageID | ProblemID | RequestID | UserID
+	ChatID | EventID | EventClientID | FailedJobID | JobID | MessageID | ProblemID | RequestID | UserID
 }
 
 func Parse[T Types](s string) (T, error) {
@@ -113,6 +113,53 @@ func (r EventID) Matches(x any) bool {
 
 func (r EventID) IsZero() bool {
 	return r == EventIDNil
+}
+
+type EventClientID uuid.UUID
+
+var EventClientIDNil = EventClientID(uuid.Nil)
+
+func NewEventClientID() EventClientID {
+	return EventClientID(uuid.New())
+}
+
+func (r EventClientID) String() string {
+	return uuid.UUID(r).String()
+}
+
+func (r EventClientID) Value() (driver.Value, error) {
+	return r.String(), nil
+}
+
+func (r *EventClientID) Scan(src any) error {
+	return (*uuid.UUID)(r).Scan(src)
+}
+
+func (r EventClientID) MarshalText() ([]byte, error) {
+	return uuid.UUID(r).MarshalText()
+}
+
+func (r *EventClientID) UnmarshalText(data []byte) error {
+	return (*uuid.UUID)(r).UnmarshalText(data)
+}
+
+func (r EventClientID) Validate() error {
+	if r.IsZero() {
+		return errors.New("zero EventClientID")
+	}
+	return nil
+}
+
+func (r EventClientID) Matches(x any) bool {
+	v, ok := x.(EventClientID)
+	if !ok {
+		return false
+	}
+	return r == v
+}
+
+func (r EventClientID) IsZero() bool {
+	return r == EventClientIDNil
 }
 
 type FailedJobID uuid.UUID

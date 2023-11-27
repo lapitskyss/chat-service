@@ -20,17 +20,17 @@ import (
 	jobsrepo "github.com/lapitskyss/chat-service/internal/repositories/jobs"
 	messagesrepo "github.com/lapitskyss/chat-service/internal/repositories/messages"
 	problemsrepo "github.com/lapitskyss/chat-service/internal/repositories/problems"
+	clientevents "github.com/lapitskyss/chat-service/internal/server-client/events"
 	clientv1 "github.com/lapitskyss/chat-service/internal/server-client/v1"
 	serverdebug "github.com/lapitskyss/chat-service/internal/server-debug"
 	managerv1 "github.com/lapitskyss/chat-service/internal/server-manager/v1"
-	eventstream "github.com/lapitskyss/chat-service/internal/services/event-stream"
+	inmemeventstream "github.com/lapitskyss/chat-service/internal/services/event-stream/in-mem"
 	managerload "github.com/lapitskyss/chat-service/internal/services/manager-load"
 	inmemmanagerpool "github.com/lapitskyss/chat-service/internal/services/manager-pool/in-mem"
 	msgproducer "github.com/lapitskyss/chat-service/internal/services/msg-producer"
 	"github.com/lapitskyss/chat-service/internal/services/outbox"
 	sendclientmessagejob "github.com/lapitskyss/chat-service/internal/services/outbox/jobs/send-client-message"
 	"github.com/lapitskyss/chat-service/internal/store"
-	"github.com/lapitskyss/chat-service/internal/types"
 )
 
 var configPath = flag.String("config", "configs/config.toml", "Path to config file")
@@ -143,9 +143,13 @@ func run() (errReturned error) {
 		return fmt.Errorf("outbox service: %v", err)
 	}
 
+	// Websocket stream
+	eventStream := inmemeventstream.New()
+
 	sendClientMessageJob, err := sendclientmessagejob.New(sendclientmessagejob.NewOptions(
 		msgProducer,
 		msgRepo,
+		eventStream,
 	))
 	if err != nil {
 		return fmt.Errorf("send client message job: %v", err)
@@ -179,6 +183,10 @@ func run() (errReturned error) {
 	if err != nil {
 		return fmt.Errorf("get manager v1 swagger: %v", err)
 	}
+	clientEventsSwagger, err := clientevents.GetSwagger()
+	if err != nil {
+		return fmt.Errorf("get client events swagger: %v", err)
+	}
 
 	srvClient, err := initServerClient(
 		cfg.Global.IsProd(),
@@ -193,6 +201,7 @@ func run() (errReturned error) {
 		chatRepo,
 		msgRepo,
 		problemRepo,
+		eventStream,
 		outBox,
 	)
 	if err != nil {
@@ -219,6 +228,7 @@ func run() (errReturned error) {
 		cfg.Servers.Debug.Addr,
 		clientV1Swagger,
 		managerV1Swagger,
+		clientEventsSwagger,
 	))
 	if err != nil {
 		return fmt.Errorf("init debug server: %v", err)
@@ -236,21 +246,4 @@ func run() (errReturned error) {
 	}
 
 	return nil
-}
-
-type dummyAdapter struct{}
-
-func (dummyAdapter) Adapt(event eventstream.Event) (any, error) {
-	return event, nil
-}
-
-type dummyEventStream struct{}
-
-func (dummyEventStream) Subscribe(ctx context.Context, _ types.UserID) (<-chan eventstream.Event, error) {
-	events := make(chan eventstream.Event)
-	go func() {
-		defer close(events)
-		<-ctx.Done()
-	}()
-	return events, nil
 }

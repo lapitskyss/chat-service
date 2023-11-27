@@ -25,9 +25,10 @@ const (
 
 //go:generate options-gen -out-filename=server_options.gen.go -from-struct=Options
 type Options struct {
-	addr           string      `option:"mandatory" validate:"required,hostname_port"`
-	clientSwagger  *openapi3.T `option:"mandatory" validate:"required"`
-	managerSwagger *openapi3.T `option:"mandatory" validate:"required"`
+	addr                string      `option:"mandatory" validate:"required,hostname_port"`
+	clientSwagger       *openapi3.T `option:"mandatory" validate:"required"`
+	managerSwagger      *openapi3.T `option:"mandatory" validate:"required"`
+	clientEventsSwagger *openapi3.T `option:"mandatory" validate:"required"`
 }
 
 type Server struct {
@@ -62,6 +63,7 @@ func New(opts Options) (*Server, error) {
 	index.addPage("/debug/error", "Debug Sentry error event")
 	index.addPage("/schema/client", "Get client OpenAPI specification")
 	index.addPage("/schema/manager", "Get manager OpenAPI specification")
+	index.addPage("/schema/clientEvents", "Get client events OpenAPI specification")
 
 	e.GET("/", index.handler)
 	e.GET("/version", s.Version)
@@ -79,6 +81,8 @@ func New(opts Options) (*Server, error) {
 	e.GET("/debug/error", s.DebugError)
 	e.GET("/schema/client", s.ExposeSchema(opts.clientSwagger))
 	e.GET("/schema/manager", s.ExposeSchema(opts.managerSwagger))
+	e.GET("/schema/manager", s.ExposeSchema(opts.managerSwagger))
+	e.GET("/schema/clientEvents", s.ExposeSchema(opts.clientEventsSwagger))
 
 	return s, nil
 }
