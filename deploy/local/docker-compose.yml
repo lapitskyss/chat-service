@@ -51,8 +51,48 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_CREATE_TOPICS: "chat.messages:16:1"
+      KAFKA_CREATE_TOPICS: "chat.messages:16:1,afc.msg-verdicts:16:1,afc.msg-verdicts.dlq:1:1"
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+
+  afc_emulator:
+    image: antonboom/writing-go-service.afc
+    depends_on:
+      - kafka
+    restart: on-failure
+    environment:
+      AFC_LOG_LEVEL: "DEBUG"
+      AFC_BROKER_ADDR: "kafka:29092"
+      AFC_MESSAGES_TOPIC: "chat.messages"
+      AFC_VERDICTS_TOPIC: "afc.msg-verdicts"
+      AFC_MSG_DECRYPTION_KEY: "51655468576D5A7134743777397A2443"
+      AFC_VERDICTS_SIGN_PRIVATE_KEY: |
+        -----BEGIN RSA PRIVATE KEY-----
+        MIIEpQIBAAKCAQEAzf10MG/4YiDJ7M94FaVIL7sZ1z/fJKyTEm3fbJ4PgownCTv3
+        o3adWZYhNRdGwu/YOhKak2uSOxQUj15QwaCFjmlVCwKuaJeXbI5BNHct46Kzo0pj
+        aX5SiY1RhCPxiZtfGk/OaRXbiyU+yHNffY7TTvpAyLoFNTgn7OiiYPWPSCOmZ2zQ
+        L+1judRIyjP1Z1aIwenmD+LoyPZ+RQ9TrdZXKHi5DxgdV/f660smWHICiMBEAJ5a
+        kcu/uemvJbmBCJkJPoeQWz39x3t1OrMWE0G/Ocs09tUDUzdxXNes+RDLyx+b0J0O
+        zUIq/+m3rWJRpe+6ErWhGvj7mBHlm8aQirBerwIDAQABAoIBAH+zkjV5JP4In8ZM
+        tICOz9qvXozADyFYT3EMZoea0bi4FHc4EwTmwxPH69xTCs5NDLqrz+J2vNgdUcWz
+        zdLMJiAskslZpzA2Umy9IBVbkTpfIoin1EuRQa/+yTtnYRVTGjlgonEpWMrBk1OH
+        mvpm8f8zS7hlAleE8dOAQTJk6afpPTyNvj1baN9okdpNZ7+5pK9Ij+YcS+aOWLix
+        A+vsIm5b0W6eXXnJLZzXNr2N2O9P/iEIdOs0+cvP58rkNQ/d4flZ6AYnUCgHHei4
+        gZxCWZgMHXzdY/t/pFM+l3G1QJzlGM6L8sIcXToTYmE1xJEf4PCV0ILt/cHUFkqU
+        HGeExnECgYEA6SpWbNgClEkl2NG9qmNCsXNOVWKj7mRylPJsKVLMZq208SekmTMj
+        qMqeN0wnwhyhmM//nYYu6dxTxhJBvXxYJyMz0G27p/5HaZC7WAl5XYM6QPPmsky5
+        T4h11J2X8TLBIjrE3wQm5d/EL9i3UqZtffTfFRwv6r4r0dGJdYZ2WokCgYEA4inO
+        iKAVd1ERIIRL9pBb0fVCVJSlX86NR3VRvB16fyrCrFjx1IE8CaeEKcYmnE7Abe0J
+        /jSM5OHKSULGbl2DeofhT2FhgV+hM/wKd3G3dVaHiuMWO9lCwnwelbXq2Rt0hhN0
+        b1YVHkI8rWMC1RDvK8Z9cExLz9VH+VJq+41TwXcCgYEAhf4cmIQyR0EaDNXLp0VP
+        qGZZF9yN1IvJBSujWMQKTt94YjWj855d2bxG3ARZvMVzYDv363CXOTGyutr3CIuS
+        pTsnpZnKA6qvI01XPCqFomWtbnI7my9YNwp2nG7MSIIgVylqxba/G89SEST7hPW7
+        amz0Xk9Kgh4zVGqUEgPps/ECgYEAnhR6uCSs3Gldf0z5i637gBXd9yCvNvg45+mo
+        58PzC0/oIm9JGS/7twPP7SMDed3RwwQcKAKzOIhZzDtQV3Qlok+3vLRkYvlkw+E3
+        r6VchjelJf70W4DQmQAIoLw3GumF2PFgQTH6MNw7bTX3lNXxVre2lfe+RdbeJ/bj
+        sFBoaqECgYEAzK91/ea5p5Hlt5yCQLeLDKSf2ohmYspkqk0HTi8iGfji2Zo99Iir
+        1rFR0Oe3otPG40HXhKDi2YdhNy/D4ypaVDkr94awTBYY8zlmgAPhf/oZu48tkxCh
+        qIanZhvea4LFXIctQKhXDCH0qwTkR9adILLKgLBS/dTrzWG2JHBE1B8=
+        -----END RSA PRIVATE KEY-----
 
 volumes:
   postgresql-data:

@@ -58,6 +58,9 @@ vars:
   E2E_CLIENT_V1_DST: ./tests/e2e/api/client/v1/client.gen.go
   E2E_CLIENT_V1_PKG: apiclientv1
 
+  E2E_CLIENT_EVENTS_DST: ./tests/e2e/api/client/events/client.gen.go
+  E2E_CLIENT_EVENTS_PKG: apiclientevents
+
 tasks:
   default:
     cmds:
@@ -218,3 +221,6 @@ tasks:
     cmds:
       - echo "[E2E] Generate client API..."
       - oapi-codegen --old-config-style -generate types,client -package {{.E2E_CLIENT_V1_PKG}} {{.CLIENT_V1_SRC}} > {{.E2E_CLIENT_V1_DST}}
+      - echo "[E2E] Generate client events..."
+      - oapi-codegen --old-config-style -generate types,client -package {{.E2E_CLIENT_EVENTS_PKG}} {{.CLIENT_EVENTS_SRC}} > {{.E2E_CLIENT_EVENTS_DST}}
+      - task: tidy

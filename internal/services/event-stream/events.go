@@ -40,6 +40,30 @@ func (e MessageSentEvent) Validate() error {
 	return validator.Validator.Struct(e)
 }
 
+// MessageBlockEvent indicates that the message was blocked by AFC.
+type MessageBlockEvent struct {
+	event
+	EventID   types.EventID   `validate:"required"`
+	RequestID types.RequestID `validate:"required"`
+	MessageID types.MessageID `validate:"required"`
+}
+
+func NewMessageBlockEvent(
+	eventID types.EventID,
+	requestID types.RequestID,
+	messageID types.MessageID,
+) *MessageBlockEvent {
+	return &MessageBlockEvent{
+		EventID:   eventID,
+		RequestID: requestID,
+		MessageID: messageID,
+	}
+}
+
+func (e MessageBlockEvent) Validate() error {
+	return validator.Validator.Struct(e)
+}
+
 // NewMessageEvent is a signal about the appearance of a new message in the chat.
 type NewMessageEvent struct {
 	event

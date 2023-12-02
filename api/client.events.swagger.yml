@@ -25,11 +25,13 @@ components:
       oneOf:
         - $ref: "#/components/schemas/NewMessageEvent"
         - $ref: "#/components/schemas/MessageSentEvent"
+        - $ref: "#/components/schemas/MessageBlockedEvent"
       discriminator:
         propertyName: eventType
         mapping:
           NewMessageEvent: "#/components/schemas/NewMessageEvent"
           MessageSentEvent: "#/components/schemas/MessageSentEvent"
+          MessageBlockedEvent: "#/components/schemas/MessageBlockedEvent"
 
     EventCommon:
       type: object
@@ -77,5 +79,9 @@ components:
               type: boolean
 
     MessageSentEvent:
+      allOf:
+        - $ref: "#/components/schemas/EventCommon"
+
+    MessageBlockedEvent:
       allOf:
         - $ref: "#/components/schemas/EventCommon"

@@ -104,7 +104,7 @@ func (h *HTTPHandler) readLoop(_ context.Context, ws Websocket) error {
 	for {
 		_, _, err := ws.NextReader()
 		if err != nil {
-			if websocket.IsCloseError(err, websocket.CloseNoStatusReceived) {
+			if websocket.IsCloseError(err, websocket.CloseGoingAway, websocket.CloseNoStatusReceived) {
 				return nil
 			}
 			return fmt.Errorf("read next message: %v", err)

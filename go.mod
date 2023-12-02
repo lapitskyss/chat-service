@@ -6,6 +6,7 @@ require (
 	entgo.io/ent v0.12.4
 	github.com/BurntSushi/toml v1.3.2
 	github.com/TheZeroSlave/zapsentry v1.18.0
+	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/deepmap/oapi-codegen v1.15.0
 	github.com/getkin/kin-openapi v0.120.0
 	github.com/getsentry/sentry-go v0.20.0

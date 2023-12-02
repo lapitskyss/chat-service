@@ -2,13 +2,17 @@ package clientchat
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
 	"time"
 
+	"github.com/onsi/ginkgo/v2"
+
 	"github.com/lapitskyss/chat-service/internal/types"
 	"github.com/lapitskyss/chat-service/pkg/pointer"
+	apiclientevents "github.com/lapitskyss/chat-service/tests/e2e/api/client/events"
 	apiclientv1 "github.com/lapitskyss/chat-service/tests/e2e/api/client/v1"
 )
 
@@ -205,6 +209,54 @@ func (c *Chat) SendMessage(ctx context.Context, body string, opts ...SendMessage
 	c.addMessageToEnd(msg)
 
 	time.Sleep(10 * time.Millisecond)
+	return nil
+}
+
+func (c *Chat) HandleEvent(_ context.Context, data []byte) error {
+	ginkgo.GinkgoWriter.Println("chat client: new event: ", string(data))
+
+	var event apiclientevents.Event
+	if err := json.Unmarshal(data, &event); err != nil {
+		return fmt.Errorf("unmarshal event: %v", err)
+	}
+
+	v, err := event.ValueByDiscriminator()
+	if err != nil {
+		return fmt.Errorf("unmarshal sub-event: %v", err)
+	}
+
+	switch vv := v.(type) {
+	case apiclientevents.NewMessageEvent:
+		msg := &Message{
+			ID:        vv.MessageId,
+			Body:      vv.Body,
+			IsService: vv.IsService,
+			CreatedAt: vv.CreatedAt,
+		}
+		if uid := vv.AuthorId; uid != nil {
+			msg.AuthorID = *uid
+		}
+
+		c.addMessageToEnd(msg)
+
+	case apiclientevents.MessageSentEvent:
+		c.msgMu.Lock()
+		defer c.msgMu.Unlock()
+
+		msg, ok := c.messagesByID[vv.MessageId]
+		if !ok {
+			return fmt.Errorf("unknown message: %v", vv.MessageId)
+		}
+
+		switch vv.EventType {
+		case "MessageSentEvent":
+			msg.IsReceived = true
+
+		case "MessageBlockedEvent":
+			msg.IsBlocked = true
+		}
+	}
+
 	return nil
 }
 

@@ -47,6 +47,19 @@ func (Adapter) Adapt(ev eventstream.Event) (any, error) {
 		}
 
 		return event, nil
+	case *eventstream.MessageBlockEvent:
+		event := Event{}
+
+		err := event.FromMessageBlockedEvent(MessageBlockedEvent{
+			EventId:   e.EventID,
+			MessageId: e.MessageID,
+			RequestId: e.RequestID,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("from new message event: %v", err)
+		}
+
+		return event, nil
 	}
 	return nil, ErrUnexpectedEventType
 }

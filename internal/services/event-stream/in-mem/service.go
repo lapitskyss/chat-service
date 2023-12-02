@@ -43,12 +43,12 @@ func (s *Service) Subscribe(ctx context.Context, userID types.UserID) (<-chan ev
 }
 
 func (s *Service) Publish(_ context.Context, userID types.UserID, event eventstream.Event) error {
+	s.wg.Add(1)
+	defer s.wg.Done()
+
 	if err := event.Validate(); err != nil {
 		return fmt.Errorf("validate event: %v", err)
 	}
-
-	s.wg.Add(1)
-	defer s.wg.Done()
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
