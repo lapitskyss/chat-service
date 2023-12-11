@@ -1,0 +1,87 @@
+openapi: 3.1.0
+info:
+  title: Bank Support Chat Client Events
+  version: v1
+
+servers:
+  - url: ws://localhost:8080/ws
+    description: Development server
+
+paths:
+  /stub:
+    get:
+      description: It uses for generating events. Otherwise it doesn't.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+
+components:
+  schemas:
+    Event:
+      oneOf:
+        - $ref: "#/components/schemas/NewMessageEvent"
+        - $ref: "#/components/schemas/MessageSentEvent"
+        - $ref: "#/components/schemas/MessageBlockedEvent"
+      discriminator:
+        propertyName: eventType
+        mapping:
+          NewMessageEvent: "#/components/schemas/NewMessageEvent"
+          MessageSentEvent: "#/components/schemas/MessageSentEvent"
+          MessageBlockedEvent: "#/components/schemas/MessageBlockedEvent"
+
+    EventCommon:
+      type: object
+      required: [ eventId, eventType, messageId, requestId ]
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          x-go-type: types.EventID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+        eventType:
+          type: string
+        messageId:
+          type: string
+          format: uuid
+          x-go-type: types.MessageID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+        requestId:
+          type: string
+          format: uuid
+          x-go-type: types.RequestID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+
+    NewMessageEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventCommon'
+        - type: object
+          required: [ body, createdAt, isService ]
+          properties:
+            authorId:
+              type: string
+              format: uuid
+              x-go-type: types.UserID
+              x-go-type-import:
+                path: "github.com/lapitskyss/chat-service/internal/types"
+            body:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+            isService:
+              type: boolean
+
+    MessageSentEvent:
+      allOf:
+        - $ref: "#/components/schemas/EventCommon"
+
+    MessageBlockedEvent:
+      allOf:
+        - $ref: "#/components/schemas/EventCommon"

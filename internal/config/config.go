@@ -49,12 +49,14 @@ type DebugServerConfig struct {
 type APIServerConfig struct {
 	Addr           string               `toml:"addr" validate:"required,hostname_port"`
 	AllowOrigins   []string             `toml:"allow_origins" validate:"required"`
+	SecWsProtocol  string               `toml:"sec_ws_protocol" validate:"required"`
 	RequiredAccess RequiredAccessConfig `toml:"required_access"`
 }
 
 type APIManagerConfig struct {
 	Addr           string               `toml:"addr" validate:"required,hostname_port"`
 	AllowOrigins   []string             `toml:"allow_origins" validate:"required"`
+	SecWsProtocol  string               `toml:"sec_ws_protocol" validate:"required"`
 	RequiredAccess RequiredAccessConfig `toml:"required_access"`
 }
 
@@ -76,15 +78,26 @@ type KeycloakConfig struct {
 }
 
 type ServicesConfig struct {
-	MsgProducer MsgProducerConfig `toml:"msg_producer"`
-	Outbox      OutboxConfig      `toml:"outbox"`
-	ManagerLoad ManagerLoadConfig `toml:"manager_load"`
+	AFCVerdictsProcessor AFCVerdictsProcessorConfig `toml:"afc_verdicts_processor"`
+	MsgProducer          MsgProducerConfig          `toml:"msg_producer"`
+	Outbox               OutboxConfig               `toml:"outbox"`
+	ManagerLoad          ManagerLoadConfig          `toml:"manager_load"`
+}
+
+type AFCVerdictsProcessorConfig struct {
+	Brokers                  []string `toml:"brokers" validate:"min=1"`
+	Consumers                int      `toml:"consumers" validate:"min=1,max=1000"`
+	ConsumerGroup            string   `toml:"consumer_group" validate:"required"`
+	VerdictsTopic            string   `toml:"verdicts_topic" validate:"required"`
+	VerdictsDlqTopic         string   `toml:"verdicts_dlq_topic" validate:"required"`
+	VerdictsSigningPublicKey string   `toml:"verdicts_signing_public_key" validate:"required"`
+	BatchSize                int      `toml:"batch_size" validate:"min=1,max=1000"`
 }
 
 type MsgProducerConfig struct {
-	Brokers    []string `toml:"brokers" validate:"required,dive,hostname_port"`
+	Brokers    []string `toml:"brokers" validate:"min=1"`
 	Topic      string   `toml:"topic" validate:"required"`
-	BatchSize  int      `toml:"batch_size" validate:"required,min=1"`
+	BatchSize  int      `toml:"batch_size" validate:"min=1,max=1000"`
 	EncryptKey string   `toml:"encrypt_key" validate:"omitempty,hexadecimal"`
 }
 

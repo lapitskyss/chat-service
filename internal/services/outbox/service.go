@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -42,7 +41,6 @@ type Service struct {
 	Options
 
 	jobs map[string]Job
-	mu   sync.RWMutex
 }
 
 func New(opts Options) (*Service, error) {
@@ -56,9 +54,6 @@ func New(opts Options) (*Service, error) {
 }
 
 func (s *Service) RegisterJob(job Job) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	if _, exits := s.jobs[job.Name()]; exits {
 		return ErrJobAlreadyExist
 	}
@@ -75,9 +70,6 @@ func (s *Service) MustRegisterJob(job Job) {
 }
 
 func (s *Service) GetJob(name string) (Job, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	job, exist := s.jobs[name]
 	return job, exist
 }
@@ -94,7 +86,7 @@ func (s *Service) runWorker(ctx context.Context) {
 		job, err := s.jobsRepo.FindAndReserveJob(ctx, time.Now().Add(s.reserveFor))
 		if err != nil {
 			if !errors.Is(err, jobsrepo.ErrNoJobs) {
-				s.logError("run worker db query", err)
+				logError("run worker db query", err)
 			}
 
 			// Fall asleep for idleTime
@@ -123,7 +115,7 @@ func (s *Service) runWorker(ctx context.Context) {
 		// Execute job with provided timeout
 		err = s.runJob(ctx, svcJob, job.Payload)
 		if err != nil {
-			s.logError("execute job", err)
+			logError("execute job", err)
 
 			// Check is number of attempts achieved
 			if job.Attempts >= svcJob.MaxAttempts() {
@@ -145,10 +137,15 @@ func (s *Service) runJob(ctx context.Context, job Job, payload string) error {
 	return job.Handle(ctx, payload)
 }
 
-func (s *Service) removeJob(ctx context.Context, job jobsrepo.Job) {
+func (s *Service) removeJob(_ context.Context, job jobsrepo.Job) {
+	// Intentionally delete job with context.WithTimeout() to avoid case when job is handled,
+	// but ctx is already closed before deleting.
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+
 	err := s.jobsRepo.DeleteJob(ctx, job.ID)
 	if err != nil {
-		s.logError("delete job from queue", err)
+		logError("delete job from queue", err)
 	}
 }
 
@@ -165,10 +162,10 @@ func (s *Service) jobFailed(ctx context.Context, job jobsrepo.Job, reason string
 		return nil
 	})
 	if err != nil {
-		s.logError("move job to failed", err)
+		logError("move job to failed", err)
 	}
 }
 
-func (s *Service) logError(msg string, err error) {
+func logError(msg string, err error) {
 	zap.L().Named(serviceName).Error(msg, zap.Error(err))
 }

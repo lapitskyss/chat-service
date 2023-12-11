@@ -11,6 +11,7 @@ type Message struct {
 	ID                  types.MessageID
 	ChatID              types.ChatID
 	AuthorID            types.UserID
+	RequestID           types.RequestID
 	IsVisibleForClient  bool
 	IsVisibleForManager bool
 	Body                string
@@ -24,6 +25,7 @@ func adaptStoreMessage(m *store.Message) Message {
 		ID:                  m.ID,
 		ChatID:              m.ChatID,
 		AuthorID:            m.AuthorID,
+		RequestID:           m.InitialRequestID,
 		IsVisibleForClient:  m.IsVisibleForClient,
 		IsVisibleForManager: m.IsVisibleForManager,
 		Body:                m.Body,

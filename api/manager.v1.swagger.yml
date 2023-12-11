@@ -73,7 +73,7 @@ components:
       enum:
         - 5000
       x-enum-varnames:
-        - ErrorManagerOverloaded
+        - ErrorCodeManagerOverloaded
       minimum: 400
 
     # /getFreeHandsBtnAvailability

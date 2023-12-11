@@ -3,10 +3,11 @@ package middlewares
 import (
 	"context"
 	"errors"
+	"net/http"
+	"strings"
 
 	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 
 	keycloakclient "github.com/lapitskyss/chat-service/internal/clients/keycloak"
 	"github.com/lapitskyss/chat-service/internal/types"
@@ -28,38 +29,87 @@ type Introspector interface {
 // NewKeycloakTokenAuth returns a middleware that implements "active" authentication:
 // each request is verified by the Keycloak server.
 func NewKeycloakTokenAuth(introspector Introspector, resource, role string) echo.MiddlewareFunc {
-	return middleware.KeyAuthWithConfig(middleware.KeyAuthConfig{
-		KeyLookup:  "header:Authorization",
-		AuthScheme: "Bearer",
-		Validator: func(tokenStr string, c echo.Context) (bool, error) {
-			// Introspect JWT token in sentry
-			iToken, err := introspector.IntrospectToken(c.Request().Context(), tokenStr)
+	validate := func(tokenStr string, c echo.Context) (bool, error) {
+		// Introspect JWT token in sentry
+		iToken, err := introspector.IntrospectToken(c.Request().Context(), tokenStr)
+		if err != nil {
+			return false, err
+		}
+		if !iToken.Active {
+			return false, ErrTokenNotActive
+		}
+
+		// Parse JWT token unverified
+		jwtToken, tokenClaims, err := parseTokenUnverified(tokenStr)
+		if err != nil {
+			return false, err
+		}
+
+		// Validate JWT token, resource role
+		if err = tokenClaims.Valid(); err != nil {
+			return false, err
+		}
+		if !hasTokenResourceRole(tokenClaims, resource, role) {
+			return false, ErrNoRequiredResourceRole
+		}
+
+		// Save token to context
+		c.Set(tokenCtxKey, jwtToken)
+		return true, nil
+	}
+
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			token := getToken(c)
+			if token == "" {
+				return echo.NewHTTPError(http.StatusBadRequest, "invalid token")
+			}
+
+			valid, err := validate(token, c)
 			if err != nil {
-				return false, err
+				return unauthorizedError(err)
 			}
-			if !iToken.Active {
-				return false, ErrTokenNotActive
-			}
-
-			// Parse JWT token unverified
-			jwtToken, tokenClaims, err := parseTokenUnverified(tokenStr)
-			if err != nil {
-				return false, err
+			if !valid {
+				return echo.NewHTTPError(http.StatusBadRequest, "invalid token")
 			}
 
-			// Validate JWT token, resource role
-			if err = tokenClaims.Valid(); err != nil {
-				return false, err
-			}
-			if !hasTokenResourceRole(tokenClaims, resource, role) {
-				return false, ErrNoRequiredResourceRole
-			}
+			return next(c)
+		}
+	}
+}
 
-			// Save token to context
-			c.Set(tokenCtxKey, jwtToken)
-			return true, nil
-		},
-	})
+func unauthorizedError(err error) *echo.HTTPError {
+	return &echo.HTTPError{
+		Code:     http.StatusUnauthorized,
+		Message:  "Unauthorized",
+		Internal: err,
+	}
+}
+
+func getToken(c echo.Context) string {
+	token := getBearerTokenFromAuthHeader(c)
+	if token != "" {
+		return token
+	}
+	return getTokenFromWebSocketProtocolHeader(c)
+}
+
+func getBearerTokenFromAuthHeader(c echo.Context) string {
+	authHeader := c.Request().Header.Get("Authorization")
+	authFields := strings.Fields(authHeader)
+	if len(authFields) != 2 || strings.ToLower(authFields[0]) != "bearer" {
+		return ""
+	}
+	return authFields[1]
+}
+
+func getTokenFromWebSocketProtocolHeader(c echo.Context) string {
+	header := c.Request().Header.Get("Sec-WebSocket-Protocol")
+	values := strings.Split(header, ",")
+	if len(values) < 2 {
+		return ""
+	}
+	return strings.TrimSpace(values[1])
 }
 
 func parseTokenUnverified(tokenStr string) (*jwt.Token, *claims, error) {

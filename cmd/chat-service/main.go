@@ -20,13 +20,18 @@ import (
 	jobsrepo "github.com/lapitskyss/chat-service/internal/repositories/jobs"
 	messagesrepo "github.com/lapitskyss/chat-service/internal/repositories/messages"
 	problemsrepo "github.com/lapitskyss/chat-service/internal/repositories/problems"
+	clientevents "github.com/lapitskyss/chat-service/internal/server-client/events"
 	clientv1 "github.com/lapitskyss/chat-service/internal/server-client/v1"
 	serverdebug "github.com/lapitskyss/chat-service/internal/server-debug"
 	managerv1 "github.com/lapitskyss/chat-service/internal/server-manager/v1"
+	afcverdictsprocessor "github.com/lapitskyss/chat-service/internal/services/afc-verdicts-processor"
+	inmemeventstream "github.com/lapitskyss/chat-service/internal/services/event-stream/in-mem"
 	managerload "github.com/lapitskyss/chat-service/internal/services/manager-load"
 	inmemmanagerpool "github.com/lapitskyss/chat-service/internal/services/manager-pool/in-mem"
 	msgproducer "github.com/lapitskyss/chat-service/internal/services/msg-producer"
 	"github.com/lapitskyss/chat-service/internal/services/outbox"
+	clientmessageblockedjob "github.com/lapitskyss/chat-service/internal/services/outbox/jobs/client-message-blocked"
+	clientmessagesentjob "github.com/lapitskyss/chat-service/internal/services/outbox/jobs/client-message-sent"
 	sendclientmessagejob "github.com/lapitskyss/chat-service/internal/services/outbox/jobs/send-client-message"
 	"github.com/lapitskyss/chat-service/internal/store"
 )
@@ -39,6 +44,7 @@ func main() {
 	}
 }
 
+//gocyclo:ignore
 func run() (errReturned error) {
 	flag.Parse()
 
@@ -141,9 +147,13 @@ func run() (errReturned error) {
 		return fmt.Errorf("outbox service: %v", err)
 	}
 
+	// Websocket stream
+	eventStream := inmemeventstream.New()
+
 	sendClientMessageJob, err := sendclientmessagejob.New(sendclientmessagejob.NewOptions(
 		msgProducer,
 		msgRepo,
+		eventStream,
 	))
 	if err != nil {
 		return fmt.Errorf("send client message job: %v", err)
@@ -151,6 +161,30 @@ func run() (errReturned error) {
 	err = outBox.RegisterJob(sendClientMessageJob)
 	if err != nil {
 		return fmt.Errorf("register send client message job: %v", err)
+	}
+
+	clientMessageBlockedJob, err := clientmessageblockedjob.New(clientmessageblockedjob.NewOptions(
+		msgRepo,
+		eventStream,
+	))
+	if err != nil {
+		return fmt.Errorf("client message blocked job: %v", err)
+	}
+	err = outBox.RegisterJob(clientMessageBlockedJob)
+	if err != nil {
+		return fmt.Errorf("register client message blocked job: %v", err)
+	}
+
+	clientMessageSentJob, err := clientmessagesentjob.New(clientmessagesentjob.NewOptions(
+		msgRepo,
+		eventStream,
+	))
+	if err != nil {
+		return fmt.Errorf("client message sent job: %v", err)
+	}
+	err = outBox.RegisterJob(clientMessageSentJob)
+	if err != nil {
+		return fmt.Errorf("register client message sent job: %v", err)
 	}
 
 	err = outBox.Run(ctx)
@@ -168,6 +202,27 @@ func run() (errReturned error) {
 
 	managerPool := inmemmanagerpool.New()
 
+	// AFC verdict processor
+	afcVerdictProcessor, err := afcverdictsprocessor.New(afcverdictsprocessor.NewOptions(
+		cfg.Services.AFCVerdictsProcessor.Brokers,
+		cfg.Services.AFCVerdictsProcessor.Consumers,
+		cfg.Services.AFCVerdictsProcessor.ConsumerGroup,
+		cfg.Services.AFCVerdictsProcessor.VerdictsTopic,
+		afcverdictsprocessor.NewKafkaReader,
+		afcverdictsprocessor.NewKafkaDLQWriter(
+			cfg.Services.AFCVerdictsProcessor.Brokers,
+			cfg.Services.AFCVerdictsProcessor.VerdictsDlqTopic,
+		),
+		db,
+		msgRepo,
+		outBox,
+		afcverdictsprocessor.WithVerdictsSignKey(cfg.Services.AFCVerdictsProcessor.VerdictsSigningPublicKey),
+		afcverdictsprocessor.WithProcessBatchSize(cfg.Services.AFCVerdictsProcessor.BatchSize),
+	))
+	if err != nil {
+		return fmt.Errorf("AFC verdict processor: %v", err)
+	}
+
 	// Servers.
 	clientV1Swagger, err := clientv1.GetSwagger()
 	if err != nil {
@@ -177,11 +232,16 @@ func run() (errReturned error) {
 	if err != nil {
 		return fmt.Errorf("get manager v1 swagger: %v", err)
 	}
+	clientEventsSwagger, err := clientevents.GetSwagger()
+	if err != nil {
+		return fmt.Errorf("get client events swagger: %v", err)
+	}
 
 	srvClient, err := initServerClient(
 		cfg.Global.IsProd(),
 		cfg.Servers.Client.Addr,
 		cfg.Servers.Client.AllowOrigins,
+		cfg.Servers.Client.SecWsProtocol,
 		clientV1Swagger,
 		kc,
 		cfg.Servers.Client.RequiredAccess.Resource,
@@ -190,6 +250,7 @@ func run() (errReturned error) {
 		chatRepo,
 		msgRepo,
 		problemRepo,
+		eventStream,
 		outBox,
 	)
 	if err != nil {
@@ -200,6 +261,7 @@ func run() (errReturned error) {
 		cfg.Global.IsProd(),
 		cfg.Servers.Manager.Addr,
 		cfg.Servers.Manager.AllowOrigins,
+		cfg.Servers.Manager.SecWsProtocol,
 		managerV1Swagger,
 		kc,
 		cfg.Servers.Manager.RequiredAccess.Resource,
@@ -215,6 +277,7 @@ func run() (errReturned error) {
 		cfg.Servers.Debug.Addr,
 		clientV1Swagger,
 		managerV1Swagger,
+		clientEventsSwagger,
 	))
 	if err != nil {
 		return fmt.Errorf("init debug server: %v", err)
@@ -226,6 +289,9 @@ func run() (errReturned error) {
 	eg.Go(func() error { return srvClient.Run(ctx) })
 	eg.Go(func() error { return srvManager.Run(ctx) })
 	eg.Go(func() error { return srvDebug.Run(ctx) })
+
+	// Run services
+	eg.Go(func() error { return afcVerdictProcessor.Run(ctx) })
 
 	if err = eg.Wait(); err != nil && !errors.Is(err, context.Canceled) {
 		return fmt.Errorf("wait app stop: %v", err)

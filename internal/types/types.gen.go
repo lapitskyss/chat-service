@@ -9,7 +9,7 @@ import (
 )
 
 type Types interface {
-	ChatID | ProblemID | MessageID | UserID | RequestID | JobID | FailedJobID
+	ChatID | EventID | EventClientID | FailedJobID | JobID | MessageID | ProblemID | RequestID | UserID
 }
 
 func Parse[T Types](s string) (T, error) {
@@ -68,192 +68,145 @@ func (r ChatID) IsZero() bool {
 	return r == ChatIDNil
 }
 
-type ProblemID uuid.UUID
+type EventID uuid.UUID
 
-var ProblemIDNil = ProblemID(uuid.Nil)
+var EventIDNil = EventID(uuid.Nil)
 
-func NewProblemID() ProblemID {
-	return ProblemID(uuid.New())
+func NewEventID() EventID {
+	return EventID(uuid.New())
 }
 
-func (r ProblemID) String() string {
+func (r EventID) String() string {
 	return uuid.UUID(r).String()
 }
 
-func (r ProblemID) Value() (driver.Value, error) {
+func (r EventID) Value() (driver.Value, error) {
 	return r.String(), nil
 }
 
-func (r *ProblemID) Scan(src any) error {
+func (r *EventID) Scan(src any) error {
 	return (*uuid.UUID)(r).Scan(src)
 }
 
-func (r ProblemID) MarshalText() ([]byte, error) {
+func (r EventID) MarshalText() ([]byte, error) {
 	return uuid.UUID(r).MarshalText()
 }
 
-func (r *ProblemID) UnmarshalText(data []byte) error {
+func (r *EventID) UnmarshalText(data []byte) error {
 	return (*uuid.UUID)(r).UnmarshalText(data)
 }
 
-func (r ProblemID) Validate() error {
+func (r EventID) Validate() error {
 	if r.IsZero() {
-		return errors.New("zero ProblemID")
+		return errors.New("zero EventID")
 	}
 	return nil
 }
 
-func (r ProblemID) Matches(x any) bool {
-	v, ok := x.(ProblemID)
+func (r EventID) Matches(x any) bool {
+	v, ok := x.(EventID)
 	if !ok {
 		return false
 	}
 	return r == v
 }
 
-func (r ProblemID) IsZero() bool {
-	return r == ProblemIDNil
+func (r EventID) IsZero() bool {
+	return r == EventIDNil
 }
 
-type MessageID uuid.UUID
+type EventClientID uuid.UUID
 
-var MessageIDNil = MessageID(uuid.Nil)
+var EventClientIDNil = EventClientID(uuid.Nil)
 
-func NewMessageID() MessageID {
-	return MessageID(uuid.New())
+func NewEventClientID() EventClientID {
+	return EventClientID(uuid.New())
 }
 
-func (r MessageID) String() string {
+func (r EventClientID) String() string {
 	return uuid.UUID(r).String()
 }
 
-func (r MessageID) Value() (driver.Value, error) {
+func (r EventClientID) Value() (driver.Value, error) {
 	return r.String(), nil
 }
 
-func (r *MessageID) Scan(src any) error {
+func (r *EventClientID) Scan(src any) error {
 	return (*uuid.UUID)(r).Scan(src)
 }
 
-func (r MessageID) MarshalText() ([]byte, error) {
+func (r EventClientID) MarshalText() ([]byte, error) {
 	return uuid.UUID(r).MarshalText()
 }
 
-func (r *MessageID) UnmarshalText(data []byte) error {
+func (r *EventClientID) UnmarshalText(data []byte) error {
 	return (*uuid.UUID)(r).UnmarshalText(data)
 }
 
-func (r MessageID) Validate() error {
+func (r EventClientID) Validate() error {
 	if r.IsZero() {
-		return errors.New("zero MessageID")
+		return errors.New("zero EventClientID")
 	}
 	return nil
 }
 
-func (r MessageID) Matches(x any) bool {
-	v, ok := x.(MessageID)
+func (r EventClientID) Matches(x any) bool {
+	v, ok := x.(EventClientID)
 	if !ok {
 		return false
 	}
 	return r == v
 }
 
-func (r MessageID) IsZero() bool {
-	return r == MessageIDNil
+func (r EventClientID) IsZero() bool {
+	return r == EventClientIDNil
 }
 
-type UserID uuid.UUID
+type FailedJobID uuid.UUID
 
-var UserIDNil = UserID(uuid.Nil)
+var FailedJobIDNil = FailedJobID(uuid.Nil)
 
-func NewUserID() UserID {
-	return UserID(uuid.New())
+func NewFailedJobID() FailedJobID {
+	return FailedJobID(uuid.New())
 }
 
-func (r UserID) String() string {
+func (r FailedJobID) String() string {
 	return uuid.UUID(r).String()
 }
 
-func (r UserID) Value() (driver.Value, error) {
+func (r FailedJobID) Value() (driver.Value, error) {
 	return r.String(), nil
 }
 
-func (r *UserID) Scan(src any) error {
+func (r *FailedJobID) Scan(src any) error {
 	return (*uuid.UUID)(r).Scan(src)
 }
 
-func (r UserID) MarshalText() ([]byte, error) {
+func (r FailedJobID) MarshalText() ([]byte, error) {
 	return uuid.UUID(r).MarshalText()
 }
 
-func (r *UserID) UnmarshalText(data []byte) error {
+func (r *FailedJobID) UnmarshalText(data []byte) error {
 	return (*uuid.UUID)(r).UnmarshalText(data)
 }
 
-func (r UserID) Validate() error {
+func (r FailedJobID) Validate() error {
 	if r.IsZero() {
-		return errors.New("zero UserID")
+		return errors.New("zero FailedJobID")
 	}
 	return nil
 }
 
-func (r UserID) Matches(x any) bool {
-	v, ok := x.(UserID)
+func (r FailedJobID) Matches(x any) bool {
+	v, ok := x.(FailedJobID)
 	if !ok {
 		return false
 	}
 	return r == v
 }
 
-func (r UserID) IsZero() bool {
-	return r == UserIDNil
-}
-
-type RequestID uuid.UUID
-
-var RequestIDNil = RequestID(uuid.Nil)
-
-func NewRequestID() RequestID {
-	return RequestID(uuid.New())
-}
-
-func (r RequestID) String() string {
-	return uuid.UUID(r).String()
-}
-
-func (r RequestID) Value() (driver.Value, error) {
-	return r.String(), nil
-}
-
-func (r *RequestID) Scan(src any) error {
-	return (*uuid.UUID)(r).Scan(src)
-}
-
-func (r RequestID) MarshalText() ([]byte, error) {
-	return uuid.UUID(r).MarshalText()
-}
-
-func (r *RequestID) UnmarshalText(data []byte) error {
-	return (*uuid.UUID)(r).UnmarshalText(data)
-}
-
-func (r RequestID) Validate() error {
-	if r.IsZero() {
-		return errors.New("zero RequestID")
-	}
-	return nil
-}
-
-func (r RequestID) Matches(x any) bool {
-	v, ok := x.(RequestID)
-	if !ok {
-		return false
-	}
-	return r == v
-}
-
-func (r RequestID) IsZero() bool {
-	return r == RequestIDNil
+func (r FailedJobID) IsZero() bool {
+	return r == FailedJobIDNil
 }
 
 type JobID uuid.UUID
@@ -303,49 +256,190 @@ func (r JobID) IsZero() bool {
 	return r == JobIDNil
 }
 
-type FailedJobID uuid.UUID
+type MessageID uuid.UUID
 
-var FailedJobIDNil = FailedJobID(uuid.Nil)
+var MessageIDNil = MessageID(uuid.Nil)
 
-func NewFailedJobID() FailedJobID {
-	return FailedJobID(uuid.New())
+func NewMessageID() MessageID {
+	return MessageID(uuid.New())
 }
 
-func (r FailedJobID) String() string {
+func (r MessageID) String() string {
 	return uuid.UUID(r).String()
 }
 
-func (r FailedJobID) Value() (driver.Value, error) {
+func (r MessageID) Value() (driver.Value, error) {
 	return r.String(), nil
 }
 
-func (r *FailedJobID) Scan(src any) error {
+func (r *MessageID) Scan(src any) error {
 	return (*uuid.UUID)(r).Scan(src)
 }
 
-func (r FailedJobID) MarshalText() ([]byte, error) {
+func (r MessageID) MarshalText() ([]byte, error) {
 	return uuid.UUID(r).MarshalText()
 }
 
-func (r *FailedJobID) UnmarshalText(data []byte) error {
+func (r *MessageID) UnmarshalText(data []byte) error {
 	return (*uuid.UUID)(r).UnmarshalText(data)
 }
 
-func (r FailedJobID) Validate() error {
+func (r MessageID) Validate() error {
 	if r.IsZero() {
-		return errors.New("zero FailedJobID")
+		return errors.New("zero MessageID")
 	}
 	return nil
 }
 
-func (r FailedJobID) Matches(x any) bool {
-	v, ok := x.(FailedJobID)
+func (r MessageID) Matches(x any) bool {
+	v, ok := x.(MessageID)
 	if !ok {
 		return false
 	}
 	return r == v
 }
 
-func (r FailedJobID) IsZero() bool {
-	return r == FailedJobIDNil
+func (r MessageID) IsZero() bool {
+	return r == MessageIDNil
+}
+
+type ProblemID uuid.UUID
+
+var ProblemIDNil = ProblemID(uuid.Nil)
+
+func NewProblemID() ProblemID {
+	return ProblemID(uuid.New())
+}
+
+func (r ProblemID) String() string {
+	return uuid.UUID(r).String()
+}
+
+func (r ProblemID) Value() (driver.Value, error) {
+	return r.String(), nil
+}
+
+func (r *ProblemID) Scan(src any) error {
+	return (*uuid.UUID)(r).Scan(src)
+}
+
+func (r ProblemID) MarshalText() ([]byte, error) {
+	return uuid.UUID(r).MarshalText()
+}
+
+func (r *ProblemID) UnmarshalText(data []byte) error {
+	return (*uuid.UUID)(r).UnmarshalText(data)
+}
+
+func (r ProblemID) Validate() error {
+	if r.IsZero() {
+		return errors.New("zero ProblemID")
+	}
+	return nil
+}
+
+func (r ProblemID) Matches(x any) bool {
+	v, ok := x.(ProblemID)
+	if !ok {
+		return false
+	}
+	return r == v
+}
+
+func (r ProblemID) IsZero() bool {
+	return r == ProblemIDNil
+}
+
+type RequestID uuid.UUID
+
+var RequestIDNil = RequestID(uuid.Nil)
+
+func NewRequestID() RequestID {
+	return RequestID(uuid.New())
+}
+
+func (r RequestID) String() string {
+	return uuid.UUID(r).String()
+}
+
+func (r RequestID) Value() (driver.Value, error) {
+	return r.String(), nil
+}
+
+func (r *RequestID) Scan(src any) error {
+	return (*uuid.UUID)(r).Scan(src)
+}
+
+func (r RequestID) MarshalText() ([]byte, error) {
+	return uuid.UUID(r).MarshalText()
+}
+
+func (r *RequestID) UnmarshalText(data []byte) error {
+	return (*uuid.UUID)(r).UnmarshalText(data)
+}
+
+func (r RequestID) Validate() error {
+	if r.IsZero() {
+		return errors.New("zero RequestID")
+	}
+	return nil
+}
+
+func (r RequestID) Matches(x any) bool {
+	v, ok := x.(RequestID)
+	if !ok {
+		return false
+	}
+	return r == v
+}
+
+func (r RequestID) IsZero() bool {
+	return r == RequestIDNil
+}
+
+type UserID uuid.UUID
+
+var UserIDNil = UserID(uuid.Nil)
+
+func NewUserID() UserID {
+	return UserID(uuid.New())
+}
+
+func (r UserID) String() string {
+	return uuid.UUID(r).String()
+}
+
+func (r UserID) Value() (driver.Value, error) {
+	return r.String(), nil
+}
+
+func (r *UserID) Scan(src any) error {
+	return (*uuid.UUID)(r).Scan(src)
+}
+
+func (r UserID) MarshalText() ([]byte, error) {
+	return uuid.UUID(r).MarshalText()
+}
+
+func (r *UserID) UnmarshalText(data []byte) error {
+	return (*uuid.UUID)(r).UnmarshalText(data)
+}
+
+func (r UserID) Validate() error {
+	if r.IsZero() {
+		return errors.New("zero UserID")
+	}
+	return nil
+}
+
+func (r UserID) Matches(x any) bool {
+	v, ok := x.(UserID)
+	if !ok {
+		return false
+	}
+	return r == v
+}
+
+func (r UserID) IsZero() bool {
+	return r == UserIDNil
 }

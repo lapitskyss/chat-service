@@ -16,6 +16,7 @@ func NewOptions(
 	logger *zap.Logger,
 	addr string,
 	handler http.Handler,
+	cancelFn func(),
 	options ...OptOptionsSetter,
 ) Options {
 	o := Options{}
@@ -25,6 +26,7 @@ func NewOptions(
 	o.logger = logger
 	o.addr = addr
 	o.handler = handler
+	o.cancelFn = cancelFn
 
 	for _, opt := range options {
 		opt(&o)

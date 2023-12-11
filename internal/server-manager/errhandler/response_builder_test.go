@@ -6,8 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	clientv1 "github.com/lapitskyss/chat-service/internal/server-client/v1"
-	"github.com/lapitskyss/chat-service/internal/server/errhandler"
+	"github.com/lapitskyss/chat-service/internal/server-manager/errhandler"
+	managerv1 "github.com/lapitskyss/chat-service/internal/server-manager/v1"
 )
 
 func TestResponseBuilder(t *testing.T) {
@@ -16,9 +16,9 @@ func TestResponseBuilder(t *testing.T) {
 
 		resp, ok := err.(errhandler.Response)
 		require.True(t, ok)
-		require.IsType(t, clientv1.Error{}, resp.Error)
+		require.IsType(t, managerv1.Error{}, resp.Error)
 
-		assert.Equal(t, clientv1.ErrorCode(1000), resp.Error.Code)
+		assert.Equal(t, managerv1.ErrorCode(1000), resp.Error.Code)
 		assert.Equal(t, "hello", resp.Error.Message)
 		require.NotNil(t, resp.Error.Details)
 		assert.Equal(t, "world", *resp.Error.Details)
@@ -29,9 +29,9 @@ func TestResponseBuilder(t *testing.T) {
 
 		resp, ok := err.(errhandler.Response)
 		require.True(t, ok)
-		require.IsType(t, clientv1.Error{}, resp.Error)
+		require.IsType(t, managerv1.Error{}, resp.Error)
 
-		assert.Equal(t, clientv1.ErrorCode(1001), resp.Error.Code)
+		assert.Equal(t, managerv1.ErrorCode(1001), resp.Error.Code)
 		assert.Equal(t, "hello", resp.Error.Message)
 		assert.Nil(t, resp.Error.Details)
 	})

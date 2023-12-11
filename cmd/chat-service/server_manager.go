@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -9,12 +10,16 @@ import (
 	keycloakclient "github.com/lapitskyss/chat-service/internal/clients/keycloak"
 	"github.com/lapitskyss/chat-service/internal/server"
 	servermanager "github.com/lapitskyss/chat-service/internal/server-manager"
+	managererrhandler "github.com/lapitskyss/chat-service/internal/server-manager/errhandler"
 	managerv1 "github.com/lapitskyss/chat-service/internal/server-manager/v1"
 	"github.com/lapitskyss/chat-service/internal/server/errhandler"
+	eventstream "github.com/lapitskyss/chat-service/internal/services/event-stream"
 	managerload "github.com/lapitskyss/chat-service/internal/services/manager-load"
 	managerpool "github.com/lapitskyss/chat-service/internal/services/manager-pool"
+	"github.com/lapitskyss/chat-service/internal/types"
 	canreceiveproblems "github.com/lapitskyss/chat-service/internal/usecases/manager/can-receive-problems"
 	freehands "github.com/lapitskyss/chat-service/internal/usecases/manager/free-hands"
+	websocketstream "github.com/lapitskyss/chat-service/internal/websocket-stream"
 )
 
 const nameServerManager = "server-manager"
@@ -24,6 +29,7 @@ func initServerManager(
 
 	addr string,
 	allowOrigins []string,
+	secWsProtocol string,
 	v1Swagger *openapi3.T,
 
 	keycloak *keycloakclient.Client,
@@ -58,7 +64,25 @@ func initServerManager(
 		return nil, fmt.Errorf("create v1 manager handlers: %v", err)
 	}
 
-	httpErrHandler, err := errhandler.New(errhandler.NewOptions(lg, productionMode, errhandler.ResponseBuilder))
+	shutdownCh := make(chan struct{})
+	cancelFn := func() {
+		close(shutdownCh)
+	}
+
+	wsUpgrader := websocketstream.NewUpgrader(allowOrigins, secWsProtocol)
+	wsHandler, err := websocketstream.NewHTTPHandler(websocketstream.NewOptions(
+		lg,
+		dummyEventStream{},
+		dummyAdapter{},
+		websocketstream.JSONEventWriter{},
+		wsUpgrader,
+		shutdownCh,
+	))
+	if err != nil {
+		return nil, fmt.Errorf("websock etstream handler: %v", err)
+	}
+
+	httpErrHandler, err := errhandler.New(errhandler.NewOptions(lg, productionMode, managererrhandler.ResponseBuilder))
 	if err != nil {
 		return nil, fmt.Errorf("create errhandler: %v", err)
 	}
@@ -72,11 +96,30 @@ func initServerManager(
 		requiredRole,
 		v1Swagger,
 		v1Handlers,
+		wsHandler,
 		httpErrHandler.Handle,
+		cancelFn,
 	))
 	if err != nil {
 		return nil, fmt.Errorf("build server: %v", err)
 	}
 
 	return srv, nil
+}
+
+type dummyAdapter struct{}
+
+func (dummyAdapter) Adapt(event eventstream.Event) (any, error) {
+	return event, nil
+}
+
+type dummyEventStream struct{}
+
+func (dummyEventStream) Subscribe(ctx context.Context, _ types.UserID) (<-chan eventstream.Event, error) {
+	events := make(chan eventstream.Event)
+	go func() {
+		defer close(events)
+		<-ctx.Done()
+	}()
+	return events, nil
 }

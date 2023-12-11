@@ -83,7 +83,7 @@ func (s *HandlersSuite) TestGetHistory_Usecase_InvalidRequest() {
 
 	// Assert.
 	s.Require().Error(err)
-	s.EqualValues(managerv1.ErrorManagerOverloaded, internalerrors.GetServerErrorCode(err))
+	s.EqualValues(managerv1.ErrorCodeManagerOverloaded, internalerrors.GetServerErrorCode(err))
 	s.Empty(resp.Body)
 }
 

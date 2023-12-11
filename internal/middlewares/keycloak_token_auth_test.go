@@ -271,7 +271,7 @@ func (s *KeycloakTokenAuthSuite) TestNoResourceRole_NoNeededRole() {
 func (s *KeycloakTokenAuthSuite) assertHTTPCode(err error, code int) {
 	var httpErr *echo.HTTPError
 	s.Require().ErrorAs(err, &httpErr)
-	s.Equal(httpErr.Code, code)
+	s.Equal(code, httpErr.Code)
 }
 
 func TestMustUserID_NoUID(t *testing.T) {

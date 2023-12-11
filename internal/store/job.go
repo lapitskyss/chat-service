@@ -18,15 +18,18 @@ type Job struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID types.JobID `json:"id,omitempty"`
-	// Name holds the value of the "name" field.
+	// Job name. Name determines handler.
 	Name string `json:"name,omitempty"`
-	// Payload holds the value of the "payload" field.
+	// Required data to complete the job.
 	Payload string `json:"payload,omitempty"`
-	// Attempts holds the value of the "attempts" field.
+	// The number of execution attempts.
+	// If a certain threshold is exceeded, the task can be removed from the queue.
 	Attempts int `json:"attempts,omitempty"`
-	// AvailableAt holds the value of the "available_at" field.
+	// The time when the job becomes available for execution. Useful for delayed execution.
 	AvailableAt time.Time `json:"available_at,omitempty"`
-	// ReservedUntil holds the value of the "reserved_until" field.
+	// Until this time the task is "reserved". Used to synchronize goroutines processing the queue.
+	// When grabbing a task, the goroutine puts in reserved_until <time.Now() + some timeout>.
+	// Until that time the task is considered "reserved", other goroutines will skip it.
 	ReservedUntil time.Time `json:"reserved_until,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt    time.Time `json:"created_at,omitempty"`

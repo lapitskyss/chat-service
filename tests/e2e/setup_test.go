@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/golang-jwt/jwt"
 	. "github.com/onsi/ginkgo/v2"
@@ -21,6 +22,7 @@ import (
 	"github.com/lapitskyss/chat-service/internal/types"
 	apiclientv1 "github.com/lapitskyss/chat-service/tests/e2e/api/client/v1"
 	clientchat "github.com/lapitskyss/chat-service/tests/e2e/client-chat"
+	wsstream "github.com/lapitskyss/chat-service/tests/e2e/ws-stream"
 )
 
 func TestE2E(t *testing.T) {
@@ -35,7 +37,11 @@ var (
 	kc *keycloakclient.Client
 
 	apiClientV1Endpoint string
-	clientsPool         *usersPool
+	wsClientEndpoint    string
+	wsClientOrigin      string
+	wsClientSecProtocol string
+
+	clientsPool *usersPool
 )
 
 var _ = BeforeSuite(func() {
@@ -43,6 +49,9 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(suiteCtxCancel)
 
 	apiClientV1Endpoint = expectEnv("E2E_CLIENT_V1_API_ENDPOINT")
+	wsClientEndpoint = expectEnv("E2E_CLIENT_WS_ENDPOINT")
+	wsClientSecProtocol = expectEnv("E2E_CLIENT_WS_SEC_PROTOCOL")
+	wsClientOrigin = expectEnv("E2E_CLIENT_WS_ORIGIN")
 
 	kcBasePath := expectEnv("E2E_KEYCLOAK_BASE_PATH")
 	kcRealm := expectEnv("E2E_KEYCLOAK_REALM")
@@ -169,4 +178,12 @@ type simpleClaims struct {
 
 func (sc simpleClaims) Valid() error {
 	return nil
+}
+
+func waitForEvent(stream *wsstream.Stream) {
+	select {
+	case <-stream.EventSignals():
+	case <-time.After(3 * time.Second):
+		Fail("no expected event in the stream")
+	}
 }
