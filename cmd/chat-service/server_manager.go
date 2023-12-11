@@ -65,7 +65,7 @@ func initServerManager(
 	}
 
 	shutdownCh := make(chan struct{})
-	cancelFn := func() {
+	shutdown := func() {
 		close(shutdownCh)
 	}
 
@@ -98,7 +98,7 @@ func initServerManager(
 		v1Handlers,
 		wsHandler,
 		httpErrHandler.Handle,
-		cancelFn,
+		shutdown,
 	))
 	if err != nil {
 		return nil, fmt.Errorf("build server: %v", err)

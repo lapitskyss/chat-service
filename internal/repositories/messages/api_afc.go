@@ -15,7 +15,7 @@ func (r *Repo) MarkAsVisibleForManager(ctx context.Context, msgID types.MessageI
 		SetCheckedAt(time.Now()).
 		Exec(ctx)
 	if err != nil {
-		return fmt.Errorf("mark as visible fot manager: %v", err)
+		return fmt.Errorf("mark as visible for manager: %v", err)
 	}
 	return nil
 }

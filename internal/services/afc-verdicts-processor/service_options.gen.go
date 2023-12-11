@@ -28,6 +28,7 @@ func NewOptions(
 	// Setting defaults from field tag (if present)
 	o.backoffInitialInterval, _ = time.ParseDuration("100ms")
 	o.backoffMaxElapsedTime, _ = time.ParseDuration("5s")
+	o.processBatchSize = 1
 
 	o.brokers = brokers
 	o.consumers = consumers
@@ -77,6 +78,7 @@ func (o *Options) Validate() error {
 	errs.Add(errors461e464ebed9.NewValidationError("consumers", _validate_Options_consumers(o)))
 	errs.Add(errors461e464ebed9.NewValidationError("consumerGroup", _validate_Options_consumerGroup(o)))
 	errs.Add(errors461e464ebed9.NewValidationError("verdictsTopic", _validate_Options_verdictsTopic(o)))
+	errs.Add(errors461e464ebed9.NewValidationError("processBatchSize", _validate_Options_processBatchSize(o)))
 	errs.Add(errors461e464ebed9.NewValidationError("readerFactory", _validate_Options_readerFactory(o)))
 	errs.Add(errors461e464ebed9.NewValidationError("dlqWriter", _validate_Options_dlqWriter(o)))
 	errs.Add(errors461e464ebed9.NewValidationError("txtor", _validate_Options_txtor(o)))
@@ -123,6 +125,13 @@ func _validate_Options_consumerGroup(o *Options) error {
 func _validate_Options_verdictsTopic(o *Options) error {
 	if err := validator461e464ebed9.GetValidatorFor(o).Var(o.verdictsTopic, "required"); err != nil {
 		return fmt461e464ebed9.Errorf("field `verdictsTopic` did not pass the test: %w", err)
+	}
+	return nil
+}
+
+func _validate_Options_processBatchSize(o *Options) error {
+	if err := validator461e464ebed9.GetValidatorFor(o).Var(o.processBatchSize, "min=1"); err != nil {
+		return fmt461e464ebed9.Errorf("field `processBatchSize` did not pass the test: %w", err)
 	}
 	return nil
 }

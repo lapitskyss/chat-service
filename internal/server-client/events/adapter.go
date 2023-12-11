@@ -43,7 +43,7 @@ func (Adapter) Adapt(ev eventstream.Event) (any, error) {
 			RequestId: e.RequestID,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("from new message event: %v", err)
+			return nil, fmt.Errorf("from message sent event: %v", err)
 		}
 
 		return event, nil
@@ -56,7 +56,7 @@ func (Adapter) Adapt(ev eventstream.Event) (any, error) {
 			RequestId: e.RequestID,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("from new message event: %v", err)
+			return nil, fmt.Errorf("from message block event: %v", err)
 		}
 
 		return event, nil

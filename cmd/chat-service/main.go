@@ -148,12 +148,13 @@ func run() (errReturned error) {
 	}
 
 	// Websocket stream
-	eventStream := inmemeventstream.New()
+	eventsStream := inmemeventstream.New()
+	defer multierr.AppendInvoke(&errReturned, multierr.Close(eventsStream))
 
 	sendClientMessageJob, err := sendclientmessagejob.New(sendclientmessagejob.NewOptions(
 		msgProducer,
 		msgRepo,
-		eventStream,
+		eventsStream,
 	))
 	if err != nil {
 		return fmt.Errorf("send client message job: %v", err)
@@ -165,7 +166,7 @@ func run() (errReturned error) {
 
 	clientMessageBlockedJob, err := clientmessageblockedjob.New(clientmessageblockedjob.NewOptions(
 		msgRepo,
-		eventStream,
+		eventsStream,
 	))
 	if err != nil {
 		return fmt.Errorf("client message blocked job: %v", err)
@@ -177,7 +178,7 @@ func run() (errReturned error) {
 
 	clientMessageSentJob, err := clientmessagesentjob.New(clientmessagesentjob.NewOptions(
 		msgRepo,
-		eventStream,
+		eventsStream,
 	))
 	if err != nil {
 		return fmt.Errorf("client message sent job: %v", err)
@@ -250,7 +251,7 @@ func run() (errReturned error) {
 		chatRepo,
 		msgRepo,
 		problemRepo,
-		eventStream,
+		eventsStream,
 		outBox,
 	)
 	if err != nil {

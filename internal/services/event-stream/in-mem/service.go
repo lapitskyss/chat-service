@@ -14,7 +14,7 @@ import (
 var ErrEventStreamClosed = errors.New("event stream closed")
 
 type Service struct {
-	clients *Clients
+	clients *clients
 
 	closed bool
 
@@ -24,7 +24,7 @@ type Service struct {
 
 func New() *Service {
 	return &Service{
-		clients: NewClients(),
+		clients: newClients(),
 		closed:  false,
 	}
 }
@@ -37,9 +37,9 @@ func (s *Service) Subscribe(ctx context.Context, userID types.UserID) (<-chan ev
 		return nil, ErrEventStreamClosed
 	}
 
-	client := s.clients.Add(ctx, userID)
+	c := s.clients.Add(ctx, userID)
 
-	return client.ch, nil
+	return c.ch, nil
 }
 
 func (s *Service) Publish(_ context.Context, userID types.UserID, event eventstream.Event) error {
@@ -57,10 +57,10 @@ func (s *Service) Publish(_ context.Context, userID types.UserID, event eventstr
 		return ErrEventStreamClosed
 	}
 
-	for _, client := range s.clients.Get(userID) {
+	for _, c := range s.clients.Get(userID) {
 		select {
-		case <-client.ctx.Done():
-			s.clients.Remove(client)
+		case <-c.ctx.Done():
+			s.clients.Remove(c)
 			continue
 		default:
 		}
@@ -68,9 +68,9 @@ func (s *Service) Publish(_ context.Context, userID types.UserID, event eventstr
 		timer := time.NewTimer(time.Second)
 		select {
 		case <-timer.C:
-			s.clients.Remove(client)
+			s.clients.Remove(c)
 			continue
-		case client.ch <- event:
+		case c.ch <- event:
 		}
 	}
 

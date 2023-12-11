@@ -29,7 +29,7 @@ type Options struct {
 	v1Handlers       managerv1.ServerInterface    `option:"mandatory" validate:"required"`
 	wsHandler        *websocketstream.HTTPHandler `option:"mandatory" validate:"required"`
 	httpErrorHandler echo.HTTPErrorHandler        `option:"mandatory" validate:"required"`
-	cancelFn         func()                       `option:"mandatory" validate:"-"`
+	shutdown         func()                       `option:"mandatory" validate:"-"`
 }
 
 func New(opts Options) (*server.Server, error) {
@@ -60,5 +60,5 @@ func New(opts Options) (*server.Server, error) {
 
 	e.GET("/ws", opts.wsHandler.Serve)
 
-	return server.New(server.NewOptions(opts.logger, opts.addr, e, opts.cancelFn))
+	return server.New(server.NewOptions(opts.logger, opts.addr, e, opts.shutdown))
 }
