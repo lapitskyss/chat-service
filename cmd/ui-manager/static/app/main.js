@@ -18,6 +18,8 @@ class App {
     static sendButton = $('#sendBtn');
     static problemResolvedButton = $('#problem-resolved-btn');
 
+    static programScroll = false;
+
     static Run() {
         const keycloak = new Keycloak({
             url: keycloakEndpoint,
@@ -47,6 +49,7 @@ class App {
 
                 this.apiClient = new APIClient(this.managerToken);
 
+                initWsStream(this.managerToken);
                 App.GetOpenProblems();
                 App.GetReadyToProblemsAv();
                 App.InitListeners();
@@ -115,26 +118,34 @@ class App {
             }
             console.log('selected chat: ' + chatId);
 
+            $(`*[data-chat-id="${App.currentChatID}"]`).removeClass('selected');
+            $(`*[data-chat-id="${chatId}"]`).addClass('selected');
             App.currentChatID = chatId;
 
             app.chatArea.empty();
+            app.currentChatHistoryCursor = '';
             App.GetLastChatMessages();
             app.problemResolvedButton.removeClass('disabled');
         });
     }
 
     static GetLastChatMessages() {
-        this.apiClient.getChatHistory(this.currentChatID, this.currentChatHistoryCursor)
+        const app = this;
+        app.programScroll = true;
+
+        this.apiClient.getChatHistory(app.currentChatID, app.currentChatHistoryCursor)
             .then((result) => {
-                this.currentChatHistoryCursor = result.next;
+                app.currentChatHistoryCursor = result.next;
 
                 for (const m of result.messages) {
-                    this.chatArea.prepend(Message.FromData(m).render());
+                    app.chatArea.prepend(Message.FromData(m).render());
                 }
 
-                this.chatArea.animate({
-                    scrollTop: this.chatArea[0].scrollHeight,
-                }, 1000);
+                app.chatArea.animate({
+                    scrollTop: app.chatArea[0].scrollHeight,
+                }, 1000, () => {
+                    app.programScroll = false;
+                });
             })
             .catch((err) => {
                 alert('Get last messages error: ' + err);
@@ -143,8 +154,12 @@ class App {
 
     static GetChatHistoryOnScroll() {
         const app = this;
-        this.chatArea.scroll(() => {
+
+        app.chatArea.scroll(() => {
             if (app.chatArea.length.is && app.chatArea.length.is(':empty')) {
+                return;
+            }
+            if (app.programScroll || (app.chatArea.scrollTop() !== 0)) {
                 return;
             }
 
@@ -153,7 +168,7 @@ class App {
                 return;
             }
 
-            app.apiClient.getChatHistory(this.currentChatID, this.currentChatHistoryCursor)
+            app.apiClient.getChatHistory(app.currentChatID, app.currentChatHistoryCursor)
                 .then((result) => {
                     app.currentChatHistoryCursor = result.next;
 
@@ -169,6 +184,7 @@ class App {
 
     static SendMessageOnBtnClick() {
         const app = this;
+
         this.sendButton.click(function () {
             if (!App.currentChatID) {
                 alert('No chat selected!');
@@ -195,13 +211,14 @@ class App {
 
     static ResolveProblemOnBtnClick() {
         const app = this;
-        this.problemResolvedButton.click(function () {
+
+        app.problemResolvedButton.click(function () {
             if (!App.currentChatID) {
                 alert('No chat selected!');
                 return;
             }
 
-            app.apiClient.problemResolved(App.currentChatID)
+            app.apiClient.closeChat(App.currentChatID)
                 .then(() => {
                     app.chatArea.empty();
                 })

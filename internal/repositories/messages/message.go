@@ -20,7 +20,20 @@ type Message struct {
 	CreatedAt           time.Time
 }
 
-func adaptStoreMessage(m *store.Message) Message {
+type ServiceMessage struct {
+	ID                  types.MessageID
+	ChatID              types.ChatID
+	ClientID            types.UserID
+	ManagerID           types.UserID
+	RequestID           types.RequestID
+	IsVisibleForClient  bool
+	IsVisibleForManager bool
+	Body                string
+	IsBlocked           bool
+	CreatedAt           time.Time
+}
+
+func adaptMessage(m *store.Message) Message {
 	return Message{
 		ID:                  m.ID,
 		ChatID:              m.ChatID,
@@ -35,10 +48,25 @@ func adaptStoreMessage(m *store.Message) Message {
 	}
 }
 
-func adaptStoreMessages(mm []*store.Message) []Message {
+func adaptMessages(mm []*store.Message) []Message {
 	result := make([]Message, len(mm))
 	for i, m := range mm {
-		result[i] = adaptStoreMessage(m)
+		result[i] = adaptMessage(m)
 	}
 	return result
+}
+
+func adaptServiceMessage(m *store.Message) ServiceMessage {
+	return ServiceMessage{
+		ID:                  m.ID,
+		ChatID:              m.ChatID,
+		ClientID:            m.Edges.Chat.ClientID,
+		ManagerID:           m.Edges.Problem.ManagerID,
+		RequestID:           m.InitialRequestID,
+		IsVisibleForClient:  m.IsVisibleForClient,
+		IsVisibleForManager: m.IsVisibleForManager,
+		Body:                m.Body,
+		IsBlocked:           m.IsBlocked,
+		CreatedAt:           m.CreatedAt,
+	}
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -11,12 +10,12 @@ import (
 	"github.com/lapitskyss/chat-service/internal/server"
 	servermanager "github.com/lapitskyss/chat-service/internal/server-manager"
 	managererrhandler "github.com/lapitskyss/chat-service/internal/server-manager/errhandler"
+	managerevents "github.com/lapitskyss/chat-service/internal/server-manager/events"
 	managerv1 "github.com/lapitskyss/chat-service/internal/server-manager/v1"
 	"github.com/lapitskyss/chat-service/internal/server/errhandler"
 	eventstream "github.com/lapitskyss/chat-service/internal/services/event-stream"
 	managerload "github.com/lapitskyss/chat-service/internal/services/manager-load"
 	managerpool "github.com/lapitskyss/chat-service/internal/services/manager-pool"
-	"github.com/lapitskyss/chat-service/internal/types"
 	canreceiveproblems "github.com/lapitskyss/chat-service/internal/usecases/manager/can-receive-problems"
 	freehands "github.com/lapitskyss/chat-service/internal/usecases/manager/free-hands"
 	websocketstream "github.com/lapitskyss/chat-service/internal/websocket-stream"
@@ -36,6 +35,7 @@ func initServerManager(
 	requiredResource string,
 	requiredRole string,
 
+	eventStream eventstream.EventStream,
 	managerLoadSvc *managerload.Service,
 	managerPool managerpool.Pool,
 ) (*server.Server, error) {
@@ -72,8 +72,8 @@ func initServerManager(
 	wsUpgrader := websocketstream.NewUpgrader(allowOrigins, secWsProtocol)
 	wsHandler, err := websocketstream.NewHTTPHandler(websocketstream.NewOptions(
 		lg,
-		dummyEventStream{},
-		dummyAdapter{},
+		eventStream,
+		managerevents.Adapter{},
 		websocketstream.JSONEventWriter{},
 		wsUpgrader,
 		shutdownCh,
@@ -105,21 +105,4 @@ func initServerManager(
 	}
 
 	return srv, nil
-}
-
-type dummyAdapter struct{}
-
-func (dummyAdapter) Adapt(event eventstream.Event) (any, error) {
-	return event, nil
-}
-
-type dummyEventStream struct{}
-
-func (dummyEventStream) Subscribe(ctx context.Context, _ types.UserID) (<-chan eventstream.Event, error) {
-	events := make(chan eventstream.Event)
-	go func() {
-		defer close(events)
-		<-ctx.Done()
-	}()
-	return events, nil
 }

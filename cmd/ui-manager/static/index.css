@@ -331,7 +331,7 @@ button, input, optgroup, select, textarea {
     height: auto;
     padding: 20px;
 }
-.card.problem:hover {
+.card.problem.selected,.card.problem:hover {
     cursor: pointer;
     background-color: lightgray;
 }

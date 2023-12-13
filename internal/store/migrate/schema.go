@@ -62,7 +62,7 @@ var (
 	MessagesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
 		{Name: "author_id", Type: field.TypeUUID, Nullable: true},
-		{Name: "initial_request_id", Type: field.TypeUUID, Unique: true},
+		{Name: "initial_request_id", Type: field.TypeUUID},
 		{Name: "is_visible_for_client", Type: field.TypeBool, Default: false},
 		{Name: "is_visible_for_manager", Type: field.TypeBool, Default: false},
 		{Name: "body", Type: field.TypeString, Size: 3000},
@@ -103,6 +103,11 @@ var (
 					},
 					Type: "BTREE",
 				},
+			},
+			{
+				Name:    "message_initial_request_id",
+				Unique:  false,
+				Columns: []*schema.Column{MessagesColumns[2]},
 			},
 		},
 	}

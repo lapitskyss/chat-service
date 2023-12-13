@@ -23,15 +23,18 @@ import (
 	clientevents "github.com/lapitskyss/chat-service/internal/server-client/events"
 	clientv1 "github.com/lapitskyss/chat-service/internal/server-client/v1"
 	serverdebug "github.com/lapitskyss/chat-service/internal/server-debug"
+	managerevents "github.com/lapitskyss/chat-service/internal/server-manager/events"
 	managerv1 "github.com/lapitskyss/chat-service/internal/server-manager/v1"
 	afcverdictsprocessor "github.com/lapitskyss/chat-service/internal/services/afc-verdicts-processor"
 	inmemeventstream "github.com/lapitskyss/chat-service/internal/services/event-stream/in-mem"
 	managerload "github.com/lapitskyss/chat-service/internal/services/manager-load"
 	inmemmanagerpool "github.com/lapitskyss/chat-service/internal/services/manager-pool/in-mem"
+	managerscheduler "github.com/lapitskyss/chat-service/internal/services/manager-scheduler"
 	msgproducer "github.com/lapitskyss/chat-service/internal/services/msg-producer"
 	"github.com/lapitskyss/chat-service/internal/services/outbox"
 	clientmessageblockedjob "github.com/lapitskyss/chat-service/internal/services/outbox/jobs/client-message-blocked"
 	clientmessagesentjob "github.com/lapitskyss/chat-service/internal/services/outbox/jobs/client-message-sent"
+	managerassignedtoproblemjob "github.com/lapitskyss/chat-service/internal/services/outbox/jobs/manager-assigned-to-problem"
 	sendclientmessagejob "github.com/lapitskyss/chat-service/internal/services/outbox/jobs/send-client-message"
 	"github.com/lapitskyss/chat-service/internal/store"
 )
@@ -151,6 +154,32 @@ func run() (errReturned error) {
 	eventsStream := inmemeventstream.New()
 	defer multierr.AppendInvoke(&errReturned, multierr.Close(eventsStream))
 
+	// Manager load service
+	managerLoad, err := managerload.New(managerload.NewOptions(
+		cfg.Services.ManagerLoad.MaxProblemsAtTime,
+		problemRepo,
+	))
+	if err != nil {
+		return fmt.Errorf("manager load service: %v", err)
+	}
+
+	//
+	managerPool := inmemmanagerpool.New()
+
+	// Manager scheduler
+	managerScheduler, err := managerscheduler.New(managerscheduler.NewOptions(
+		cfg.Services.ManagerScheduler.Period,
+		managerPool,
+		msgRepo,
+		outBox,
+		problemRepo,
+		db,
+	))
+	if err != nil {
+		return fmt.Errorf("manager scheduler service: %v", err)
+	}
+
+	// Outbox jobs
 	sendClientMessageJob, err := sendclientmessagejob.New(sendclientmessagejob.NewOptions(
 		msgProducer,
 		msgRepo,
@@ -188,20 +217,23 @@ func run() (errReturned error) {
 		return fmt.Errorf("register client message sent job: %v", err)
 	}
 
+	managerAssignedToProblemJob, err := managerassignedtoproblemjob.New(managerassignedtoproblemjob.NewOptions(
+		managerLoad,
+		msgRepo,
+		eventsStream,
+	))
+	if err != nil {
+		return fmt.Errorf("manager assigned to problem job: %v", err)
+	}
+	err = outBox.RegisterJob(managerAssignedToProblemJob)
+	if err != nil {
+		return fmt.Errorf("register manager assigned to problem job: %v", err)
+	}
+
 	err = outBox.Run(ctx)
 	if err != nil {
 		return fmt.Errorf("run outbox: %v", err)
 	}
-
-	managerLoad, err := managerload.New(managerload.NewOptions(
-		cfg.Services.ManagerLoad.MaxProblemsAtTime,
-		problemRepo,
-	))
-	if err != nil {
-		return fmt.Errorf("manager load service: %v", err)
-	}
-
-	managerPool := inmemmanagerpool.New()
 
 	// AFC verdict processor
 	afcVerdictProcessor, err := afcverdictsprocessor.New(afcverdictsprocessor.NewOptions(
@@ -237,6 +269,10 @@ func run() (errReturned error) {
 	if err != nil {
 		return fmt.Errorf("get client events swagger: %v", err)
 	}
+	managerEventsSwagger, err := managerevents.GetSwagger()
+	if err != nil {
+		return fmt.Errorf("get manager events swagger: %v", err)
+	}
 
 	srvClient, err := initServerClient(
 		cfg.Global.IsProd(),
@@ -267,6 +303,7 @@ func run() (errReturned error) {
 		kc,
 		cfg.Servers.Manager.RequiredAccess.Resource,
 		cfg.Servers.Manager.RequiredAccess.Role,
+		eventsStream,
 		managerLoad,
 		managerPool,
 	)
@@ -279,6 +316,7 @@ func run() (errReturned error) {
 		clientV1Swagger,
 		managerV1Swagger,
 		clientEventsSwagger,
+		managerEventsSwagger,
 	))
 	if err != nil {
 		return fmt.Errorf("init debug server: %v", err)
@@ -293,6 +331,7 @@ func run() (errReturned error) {
 
 	// Run services
 	eg.Go(func() error { return afcVerdictProcessor.Run(ctx) })
+	eg.Go(func() error { return managerScheduler.Run(ctx) })
 
 	if err = eg.Wait(); err != nil && !errors.Is(err, context.Canceled) {
 		return fmt.Errorf("wait app stop: %v", err)

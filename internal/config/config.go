@@ -82,6 +82,7 @@ type ServicesConfig struct {
 	MsgProducer          MsgProducerConfig          `toml:"msg_producer"`
 	Outbox               OutboxConfig               `toml:"outbox"`
 	ManagerLoad          ManagerLoadConfig          `toml:"manager_load"`
+	ManagerScheduler     ManagerSchedulerConfig     `toml:"manager_scheduler"`
 }
 
 type AFCVerdictsProcessorConfig struct {
@@ -109,4 +110,8 @@ type OutboxConfig struct {
 
 type ManagerLoadConfig struct {
 	MaxProblemsAtTime int `toml:"max_problems_at_same_time" validate:"min=1,max=30"`
+}
+
+type ManagerSchedulerConfig struct {
+	Period time.Duration `toml:"period" validate:"min=1s,max=10s"`
 }

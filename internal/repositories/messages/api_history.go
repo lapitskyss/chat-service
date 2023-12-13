@@ -54,14 +54,14 @@ func (r *Repo) GetClientChatMessages(
 	}
 
 	if len(msgs) <= pageSize {
-		return adaptStoreMessages(msgs), nil, nil
+		return adaptMessages(msgs), nil, nil
 	}
 
 	c := &Cursor{
 		LastCreatedAt: msgs[len(msgs)-2].CreatedAt,
 		PageSize:      pageSize,
 	}
-	return adaptStoreMessages(msgs[:len(msgs)-1]), c, nil
+	return adaptMessages(msgs[:len(msgs)-1]), c, nil
 }
 
 func validateGetClientChatMessages(pageSize int, cursor *Cursor) (int, time.Time, error) {
