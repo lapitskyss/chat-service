@@ -7,6 +7,7 @@ import (
 	"go.uber.org/zap"
 
 	keycloakclient "github.com/lapitskyss/chat-service/internal/clients/keycloak"
+	chatsrepo "github.com/lapitskyss/chat-service/internal/repositories/chats"
 	"github.com/lapitskyss/chat-service/internal/server"
 	servermanager "github.com/lapitskyss/chat-service/internal/server-manager"
 	managererrhandler "github.com/lapitskyss/chat-service/internal/server-manager/errhandler"
@@ -18,6 +19,7 @@ import (
 	managerpool "github.com/lapitskyss/chat-service/internal/services/manager-pool"
 	canreceiveproblems "github.com/lapitskyss/chat-service/internal/usecases/manager/can-receive-problems"
 	freehands "github.com/lapitskyss/chat-service/internal/usecases/manager/free-hands"
+	getchats "github.com/lapitskyss/chat-service/internal/usecases/manager/get-chats"
 	websocketstream "github.com/lapitskyss/chat-service/internal/websocket-stream"
 )
 
@@ -35,30 +37,39 @@ func initServerManager(
 	requiredResource string,
 	requiredRole string,
 
+	chatRepo *chatsrepo.Repo,
+
 	eventStream eventstream.EventStream,
 	managerLoadSvc *managerload.Service,
 	managerPool managerpool.Pool,
 ) (*server.Server, error) {
 	lg := zap.L().Named(nameServerManager)
 
-	canReceiveProblemUserCase, err := canreceiveproblems.New(canreceiveproblems.NewOptions(
+	canReceiveProblemUseCase, err := canreceiveproblems.New(canreceiveproblems.NewOptions(
 		managerLoadSvc,
 		managerPool,
 	))
 	if err != nil {
 		return nil, fmt.Errorf("canreceiveproblems usecase: %v", err)
 	}
-	freeHandsUserCase, err := freehands.New(freehands.NewOptions(
+	freeHandsUseCase, err := freehands.New(freehands.NewOptions(
 		managerLoadSvc,
 		managerPool,
 	))
 	if err != nil {
-		return nil, fmt.Errorf("canreceiveproblems usecase: %v", err)
+		return nil, fmt.Errorf("freehands usecase: %v", err)
+	}
+	getChatsUseCase, err := getchats.New(getchats.NewOptions(
+		chatRepo,
+	))
+	if err != nil {
+		return nil, fmt.Errorf("getchats usecase: %v", err)
 	}
 
 	v1Handlers, err := managerv1.NewHandlers(managerv1.NewOptions(
-		canReceiveProblemUserCase,
-		freeHandsUserCase,
+		canReceiveProblemUseCase,
+		freeHandsUseCase,
+		getChatsUseCase,
 	))
 	if err != nil {
 		return nil, fmt.Errorf("create v1 manager handlers: %v", err)

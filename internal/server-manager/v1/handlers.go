@@ -10,6 +10,7 @@ import (
 	svcerr "github.com/lapitskyss/chat-service/internal/errors"
 	canreceiveproblems "github.com/lapitskyss/chat-service/internal/usecases/manager/can-receive-problems"
 	freehands "github.com/lapitskyss/chat-service/internal/usecases/manager/free-hands"
+	getchats "github.com/lapitskyss/chat-service/internal/usecases/manager/get-chats"
 )
 
 var _ ServerInterface = (*Handlers)(nil)
@@ -24,10 +25,15 @@ type freeHandsUseCase interface {
 	Handle(ctx context.Context, req freehands.Request) error
 }
 
+type getChatsUseCase interface {
+	Handle(ctx context.Context, req getchats.Request) (getchats.Response, error)
+}
+
 //go:generate options-gen -out-filename=handlers.gen.go -from-struct=Options
 type Options struct {
 	canReceiveProblems canReceiveProblemsUseCase `option:"mandatory" validate:"required"`
 	freeHands          freeHandsUseCase          `option:"mandatory" validate:"required"`
+	getChats           getChatsUseCase           `option:"mandatory" validate:"required"`
 }
 
 type Handlers struct {

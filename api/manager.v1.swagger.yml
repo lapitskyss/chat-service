@@ -32,6 +32,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/FreeHandsResponse"
+  /getChats:
+    post:
+      description: Get the list of chats with open problems.
+      parameters:
+        - $ref: "#/components/parameters/XRequestIDHeader"
+      responses:
+        '200':
+          description: Chats list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetChatsResponse"
+
 security:
   - bearerAuth: [ ]
 
@@ -56,6 +69,16 @@ components:
 
   schemas:
     # Common.
+
+    ChatId:
+      required: [ chatId ]
+      properties:
+        chatId:
+          type: string
+          format: uuid
+          x-go-type: types.ChatID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
 
     Error:
       required: [ message, code ]
@@ -100,3 +123,31 @@ components:
 
     FreeHands:
       required: [ ]
+
+    # /getChats
+    GetChatsResponse:
+      properties:
+        data:
+          $ref: "#/components/schemas/ChatList"
+        error:
+          $ref: "#/components/schemas/Error"
+
+    ChatList:
+      required: [ chats ]
+      properties:
+        chats:
+          type: array
+          items: { $ref: "#/components/schemas/Chat" }
+
+    Chat:
+      allOf:
+        - $ref: "#/components/schemas/ChatId"
+        - type: object
+          required: [ clientId ]
+          properties:
+            clientId:
+              type: string
+              format: uuid
+              x-go-type: types.UserID
+              x-go-type-import:
+                path: "github.com/lapitskyss/chat-service/internal/types"

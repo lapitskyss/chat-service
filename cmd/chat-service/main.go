@@ -303,6 +303,7 @@ func run() (errReturned error) {
 		kc,
 		cfg.Servers.Manager.RequiredAccess.Resource,
 		cfg.Servers.Manager.RequiredAccess.Role,
+		chatRepo,
 		eventsStream,
 		managerLoad,
 		managerPool,
