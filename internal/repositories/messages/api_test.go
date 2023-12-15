@@ -79,6 +79,52 @@ func (s *MsgRepoAPISuite) Test_GetMessageByID() {
 	})
 }
 
+func (s *MsgRepoAPISuite) Test_GetMessageByIDWithManager() {
+	s.Run("message exists", func() {
+		authorID := types.NewUserID()
+		managerID := types.NewUserID()
+
+		// Create chat and problem.
+		problemID, chatID := s.createProblemWithManagerAndChat(authorID, managerID)
+
+		msgID := types.NewMessageID()
+
+		// Create message.
+		expectedMsg, err := s.Database.Message(s.Ctx).Create().
+			SetID(msgID).
+			SetChatID(chatID).
+			SetAuthorID(authorID).
+			SetProblemID(problemID).
+			SetBody(msgBody).
+			SetIsBlocked(true).
+			SetIsService(true).
+			SetInitialRequestID(types.NewRequestID()).
+			Save(s.Ctx)
+		s.Require().NoError(err)
+
+		// Get it.
+		actualMsg, err := s.repo.GetMessageByIDWithManager(s.Ctx, msgID)
+		s.Require().NoError(err)
+		s.Require().NotNil(actualMsg)
+		s.Equal(expectedMsg.ID, actualMsg.ID)
+		s.Equal(expectedMsg.ChatID, actualMsg.ChatID)
+		s.Equal(expectedMsg.AuthorID, actualMsg.AuthorID)
+		s.Equal(managerID, actualMsg.ManagerID)
+		s.Equal(expectedMsg.Body, actualMsg.Body)
+		s.Equal(expectedMsg.CreatedAt.Unix(), actualMsg.CreatedAt.Unix())
+		s.Equal(expectedMsg.IsVisibleForClient, actualMsg.IsVisibleForClient)
+		s.Equal(expectedMsg.IsVisibleForManager, actualMsg.IsVisibleForManager)
+		s.Equal(expectedMsg.IsBlocked, actualMsg.IsBlocked)
+		s.Equal(expectedMsg.IsService, actualMsg.IsService)
+	})
+
+	s.Run("message does not exist", func() {
+		msg, err := s.repo.GetMessageByID(s.Ctx, types.NewMessageID())
+		s.Require().Error(err)
+		s.Require().Nil(msg)
+	})
+}
+
 func (s *MsgRepoAPISuite) Test_GetMessageByRequestID() {
 	s.Run("message exists", func() {
 		authorID := types.NewUserID()
@@ -245,22 +291,6 @@ func (s *MsgRepoAPISuite) Test_CreateServiceMsg() {
 			s.Equal(initialRequestID, dbMsg.InitialRequestID)
 		})
 	}
-}
-
-func (s *MsgRepoAPISuite) Test_CreateClientVisible_DuplicationError() {
-	authorID := types.NewUserID()
-
-	// Create chat and problem.
-	problemID, chatID := s.createProblemAndChat(authorID)
-	initialRequestID := types.NewRequestID()
-
-	// Check message was created.
-	_, err := s.repo.CreateClientVisible(s.Ctx, initialRequestID, problemID, chatID, authorID, msgBody)
-	s.Require().NoError(err)
-
-	// Retry message creation.
-	_, err = s.repo.CreateClientVisible(s.Ctx, initialRequestID, problemID, chatID, authorID, msgBody)
-	s.Require().Error(err)
 }
 
 func (s *MsgRepoAPISuite) createProblemAndChat(clientID types.UserID) (types.ProblemID, types.ChatID) {

@@ -31,6 +31,23 @@ func (Adapter) Adapt(ev eventstream.Event) (any, error) {
 		}
 
 		return event, nil
+	case *eventstream.NewMessageEvent:
+		event := Event{}
+
+		err := event.FromNewMessageEvent(NewMessageEvent{
+			AuthorId:  e.UserID,
+			Body:      e.MessageBody,
+			ChatId:    e.ChatID,
+			CreatedAt: e.CreatedAt,
+			EventId:   e.EventID,
+			MessageId: e.MessageID,
+			RequestId: e.RequestID,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("from new message event: %v", err)
+		}
+
+		return event, nil
 	default:
 		return nil, ErrUnexpectedEventType
 	}

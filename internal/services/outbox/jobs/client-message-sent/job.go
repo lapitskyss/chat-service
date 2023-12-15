@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"golang.org/x/sync/errgroup"
+
 	messagesrepo "github.com/lapitskyss/chat-service/internal/repositories/messages"
 	eventstream "github.com/lapitskyss/chat-service/internal/services/event-stream"
 	"github.com/lapitskyss/chat-service/internal/services/outbox"
@@ -13,7 +15,7 @@ import (
 const Name = "client-message-sent"
 
 type messageRepository interface {
-	GetMessageByID(ctx context.Context, msgID types.MessageID) (*messagesrepo.Message, error)
+	GetMessageByIDWithManager(ctx context.Context, msgID types.MessageID) (*messagesrepo.MessageWithManager, error)
 }
 
 type eventStream interface {
@@ -48,19 +50,48 @@ func (j *Job) Handle(ctx context.Context, payload string) error {
 		return fmt.Errorf("unmarshal payload: %v", err)
 	}
 
-	message, err := j.msgRepo.GetMessageByID(ctx, messageID)
+	msg, err := j.msgRepo.GetMessageByIDWithManager(ctx, messageID)
 	if err != nil {
 		return fmt.Errorf("message repo, get message by id: %v", err)
 	}
 
-	event := eventstream.NewMessageSentEvent(
-		types.NewEventID(),
-		message.RequestID,
-		message.ID,
-	)
-	err = j.eventStream.Publish(ctx, message.AuthorID, event)
+	eg, ctx := errgroup.WithContext(ctx)
+
+	eg.Go(func() error {
+		err = j.eventStream.Publish(ctx, msg.AuthorID, eventstream.NewMessageSentEvent(
+			types.NewEventID(),
+			msg.RequestID,
+			msg.ID,
+		))
+		if err != nil {
+			return fmt.Errorf("event stream, publish message sent event: %v", err)
+		}
+		return nil
+	})
+
+	eg.Go(func() error {
+		if msg.ManagerID.IsZero() {
+			return nil
+		}
+		err = j.eventStream.Publish(ctx, msg.ManagerID, eventstream.NewNewMessageEvent(
+			types.NewEventID(),
+			msg.RequestID,
+			msg.ChatID,
+			msg.ID,
+			msg.AuthorID,
+			msg.CreatedAt,
+			msg.Body,
+			msg.IsService,
+		))
+		if err != nil {
+			return fmt.Errorf("event stream, publish message sent event: %v", err)
+		}
+		return nil
+	})
+
+	err = eg.Wait()
 	if err != nil {
-		return fmt.Errorf("event stream, publish message sent event: %v", err)
+		return fmt.Errorf("errgroup wait: %v", err)
 	}
 
 	return nil

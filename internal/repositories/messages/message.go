@@ -33,6 +33,20 @@ type ServiceMessage struct {
 	CreatedAt           time.Time
 }
 
+type MessageWithManager struct {
+	ID                  types.MessageID
+	ChatID              types.ChatID
+	AuthorID            types.UserID
+	ManagerID           types.UserID
+	RequestID           types.RequestID
+	IsVisibleForClient  bool
+	IsVisibleForManager bool
+	Body                string
+	IsBlocked           bool
+	IsService           bool
+	CreatedAt           time.Time
+}
+
 func adaptMessage(m *store.Message) Message {
 	return Message{
 		ID:                  m.ID,
@@ -67,6 +81,22 @@ func adaptServiceMessage(m *store.Message) ServiceMessage {
 		IsVisibleForManager: m.IsVisibleForManager,
 		Body:                m.Body,
 		IsBlocked:           m.IsBlocked,
+		CreatedAt:           m.CreatedAt,
+	}
+}
+
+func adaptMessageWithManager(m *store.Message) MessageWithManager {
+	return MessageWithManager{
+		ID:                  m.ID,
+		ChatID:              m.ChatID,
+		AuthorID:            m.AuthorID,
+		ManagerID:           m.Edges.Problem.ManagerID,
+		RequestID:           m.InitialRequestID,
+		IsVisibleForClient:  m.IsVisibleForClient,
+		IsVisibleForManager: m.IsVisibleForManager,
+		Body:                m.Body,
+		IsBlocked:           m.IsBlocked,
+		IsService:           m.IsService,
 		CreatedAt:           m.CreatedAt,
 	}
 }
