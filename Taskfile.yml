@@ -120,6 +120,7 @@ tasks:
       TEST_KEYCLOAK_CLIENT_SECRET: bAsBxAavMvxX4SeFx0g0yBarS8KPxYm7
       TEST_KEYCLOAK_TEST_USER: integration-testing
       TEST_KEYCLOAK_TEST_PASSWORD: integration-testing
+      KAFKA_ADDRESS: localhost:9092
     cmds:
       - echo "- Integration tests"
       - go test -tags integration -count 1 -race ./...
@@ -127,12 +128,15 @@ tasks:
   tests:e2e:
     env:
       E2E_CLIENT_V1_API_ENDPOINT: http://localhost:8080/v1
+      E2E_CLIENT_WS_ENDPOINT: ws://localhost:8080/ws
+      E2E_CLIENT_WS_SEC_PROTOCOL: chat-service-protocol
+      E2E_CLIENT_WS_ORIGIN: http://localhost:3000 # Emulate client UI.
       E2E_KEYCLOAK_BASE_PATH: http://localhost:3010
       E2E_KEYCLOAK_REALM: Bank
       E2E_KEYCLOAK_CLIENT_ID: e2e-testing
-      E2E_KEYCLOAK_CLIENT_SECRET: qj2cDBSGdDgQFSqFcYV0tSUAXml1dQcS
+      E2E_KEYCLOAK_CLIENT_SECRET: IwF4kEKxLhgJeW9rdenZ1NEJijpf5Dww
       E2E_KEYCLOAK_CLIENT_DEBUG: false
-      E2E_KEYCLOAK_CLIENTS: e2e_client_0,e2e_client_1
+      E2E_KEYCLOAK_CLIENTS: e2e_client_0,e2e_client_1,e2e_client_2
     cmds:
       - echo "- End-to-end tests..."
       # NOTE: It's important to run tests serial (without `-p` flag) – for correct `clientsPool` sharing.
@@ -228,5 +232,5 @@ tasks:
       - echo "[E2E] Generate client API..."
       - oapi-codegen --old-config-style -generate types,client -package {{.E2E_CLIENT_V1_PKG}} {{.CLIENT_V1_SRC}} > {{.E2E_CLIENT_V1_DST}}
       - echo "[E2E] Generate client events..."
-      - oapi-codegen --old-config-style -generate types,client -package {{.E2E_CLIENT_EVENTS_PKG}} {{.CLIENT_EVENTS_SRC}} > {{.E2E_CLIENT_EVENTS_DST}}
+      - oapi-codegen --old-config-style -generate skip-prune,types -package {{.E2E_CLIENT_EVENTS_PKG}} {{.CLIENT_EVENTS_SRC}} > {{.E2E_CLIENT_EVENTS_DST}}
       - task: tidy

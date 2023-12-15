@@ -215,6 +215,10 @@ func (c *Chat) SendMessage(ctx context.Context, body string, opts ...SendMessage
 func (c *Chat) HandleEvent(_ context.Context, data []byte) error {
 	ginkgo.GinkgoWriter.Println("chat client: new event: ", string(data))
 
+	if len(data) == 0 {
+		return nil
+	}
+
 	var event apiclientevents.Event
 	if err := json.Unmarshal(data, &event); err != nil {
 		return fmt.Errorf("unmarshal event: %v", err)

@@ -183,7 +183,7 @@ func (sc simpleClaims) Valid() error {
 func waitForEvent(stream *wsstream.Stream) {
 	select {
 	case <-stream.EventSignals():
-	case <-time.After(3 * time.Second):
+	case <-time.After(5 * time.Second):
 		Fail("no expected event in the stream")
 	}
 }

@@ -58,9 +58,8 @@ type Options struct {
 type Service struct {
 	Options
 
-	key     *rsa.PublicKey
-	dlq     chan erroredMessage
-	backoff backoff.BackOff
+	key *rsa.PublicKey
+	dlq chan erroredMessage
 }
 
 func New(opts Options) (*Service, error) {
@@ -79,16 +78,10 @@ func New(opts Options) (*Service, error) {
 
 	dlq := make(chan erroredMessage)
 
-	retry := backoff.NewExponentialBackOff()
-	retry.InitialInterval = opts.backoffInitialInterval
-	retry.RandomizationFactor = 0
-	retry.MaxElapsedTime = opts.backoffMaxElapsedTime
-
 	return &Service{
 		Options: opts,
 		key:     key,
 		dlq:     dlq,
-		backoff: retry,
 	}, nil
 }
 
@@ -162,23 +155,27 @@ func (s *Service) handleMessage(ctx context.Context, msg kafka.Message) error {
 }
 
 func (s *Service) processBlockMessage(ctx context.Context, verdict *Verdict) error {
+	b := backoff.WithContext(s.newProcessMessageBackOff(), ctx)
+
 	return backoff.Retry(func() error {
 		err := s.blockMessage(ctx, verdict)
 		if err != nil {
 			return err
 		}
 		return nil
-	}, backoff.WithContext(s.backoff, ctx))
+	}, b)
 }
 
 func (s *Service) processMarkAsVisibleForManager(ctx context.Context, verdict *Verdict) error {
+	b := backoff.WithContext(s.newProcessMessageBackOff(), ctx)
+
 	return backoff.Retry(func() error {
 		err := s.markAsVisibleForManager(ctx, verdict)
 		if err != nil {
 			return err
 		}
 		return nil
-	}, backoff.WithContext(s.backoff, ctx))
+	}, b)
 }
 
 func (s *Service) blockMessage(ctx context.Context, verdict *Verdict) error {
@@ -256,4 +253,11 @@ func (s *Service) parseVerdict(_ context.Context, data []byte) (*Verdict, error)
 		return nil, fmt.Errorf("validate verdict: %v", err)
 	}
 	return &verdict, nil
+}
+
+func (s *Service) newProcessMessageBackOff() *backoff.ExponentialBackOff {
+	b := backoff.NewExponentialBackOff()
+	b.InitialInterval = s.backoffInitialInterval
+	b.MaxElapsedTime = s.backoffMaxElapsedTime
+	return b
 }
