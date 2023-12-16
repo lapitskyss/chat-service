@@ -19,10 +19,13 @@ import (
 	eventstream "github.com/lapitskyss/chat-service/internal/services/event-stream"
 	managerload "github.com/lapitskyss/chat-service/internal/services/manager-load"
 	managerpool "github.com/lapitskyss/chat-service/internal/services/manager-pool"
+	"github.com/lapitskyss/chat-service/internal/services/outbox"
+	"github.com/lapitskyss/chat-service/internal/store"
 	canreceiveproblems "github.com/lapitskyss/chat-service/internal/usecases/manager/can-receive-problems"
 	freehands "github.com/lapitskyss/chat-service/internal/usecases/manager/free-hands"
 	getchathistory "github.com/lapitskyss/chat-service/internal/usecases/manager/get-chat-history"
 	getchats "github.com/lapitskyss/chat-service/internal/usecases/manager/get-chats"
+	sendmessage "github.com/lapitskyss/chat-service/internal/usecases/manager/send-message"
 	websocketstream "github.com/lapitskyss/chat-service/internal/websocket-stream"
 )
 
@@ -40,6 +43,7 @@ func initServerManager(
 	requiredResource string,
 	requiredRole string,
 
+	db *store.Database,
 	chatRepo *chatsrepo.Repo,
 	msgRepo *messagesrepo.Repo,
 	problemRepo *problemsrepo.Repo,
@@ -47,6 +51,7 @@ func initServerManager(
 	eventStream eventstream.EventStream,
 	managerLoadSvc *managerload.Service,
 	managerPool managerpool.Pool,
+	outboxSvc *outbox.Service,
 ) (*server.Server, error) {
 	lg := zap.L().Named(nameServerManager)
 
@@ -77,12 +82,22 @@ func initServerManager(
 	if err != nil {
 		return nil, fmt.Errorf("getchats usecase: %v", err)
 	}
+	sendMessage, err := sendmessage.New(sendmessage.NewOptions(
+		msgRepo,
+		outboxSvc,
+		problemRepo,
+		db,
+	))
+	if err != nil {
+		return nil, fmt.Errorf("sendmessage usecase: %v", err)
+	}
 
 	v1Handlers, err := managerv1.NewHandlers(managerv1.NewOptions(
 		canReceiveProblemUseCase,
 		freeHandsUseCase,
 		getChatHistoryUseCase,
 		getChatsUseCase,
+		sendMessage,
 	))
 	if err != nil {
 		return nil, fmt.Errorf("create v1 manager handlers: %v", err)

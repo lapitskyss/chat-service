@@ -36,6 +36,7 @@ import (
 	clientmessagesentjob "github.com/lapitskyss/chat-service/internal/services/outbox/jobs/client-message-sent"
 	managerassignedtoproblemjob "github.com/lapitskyss/chat-service/internal/services/outbox/jobs/manager-assigned-to-problem"
 	sendclientmessagejob "github.com/lapitskyss/chat-service/internal/services/outbox/jobs/send-client-message"
+	sendmanagermessagejob "github.com/lapitskyss/chat-service/internal/services/outbox/jobs/send-manager-message"
 	"github.com/lapitskyss/chat-service/internal/store"
 )
 
@@ -230,6 +231,20 @@ func run() (errReturned error) {
 		return fmt.Errorf("register manager assigned to problem job: %v", err)
 	}
 
+	sendManagerMessageJob, err := sendmanagermessagejob.New(sendmanagermessagejob.NewOptions(
+		msgRepo,
+		chatRepo,
+		eventsStream,
+		msgProducer,
+	))
+	if err != nil {
+		return fmt.Errorf("send manager message job: %v", err)
+	}
+	err = outBox.RegisterJob(sendManagerMessageJob)
+	if err != nil {
+		return fmt.Errorf("register send manager message job: %v", err)
+	}
+
 	err = outBox.Run(ctx)
 	if err != nil {
 		return fmt.Errorf("run outbox: %v", err)
@@ -303,12 +318,14 @@ func run() (errReturned error) {
 		kc,
 		cfg.Servers.Manager.RequiredAccess.Resource,
 		cfg.Servers.Manager.RequiredAccess.Role,
+		db,
 		chatRepo,
 		msgRepo,
 		problemRepo,
 		eventsStream,
 		managerLoad,
 		managerPool,
+		outBox,
 	)
 	if err != nil {
 		return fmt.Errorf("init manager server: %v", err)

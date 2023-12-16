@@ -92,7 +92,7 @@ func (s *UseCaseSuite) TestGetProblemMessages_InvalidCursor() {
 	cursorWithNegativePageSize, err := cursor.Encode(c)
 	s.Require().NoError(err)
 
-	s.problemRepo.EXPECT().GetManagerProblemForChat(s.Ctx, managerID, chatID).
+	s.problemRepo.EXPECT().GetAssignedProblemID(s.Ctx, managerID, chatID).
 		Return(problemID, nil)
 	s.msgRepo.EXPECT().GetProblemMessages(s.Ctx, problemID, 0, messagesrepo.NewCursorMatcher(c)).
 		Return(nil, nil, messagesrepo.ErrInvalidCursor)
@@ -122,7 +122,7 @@ func (s *UseCaseSuite) TestGetProblemMessages_SomeError() {
 	problemID := types.NewProblemID()
 	errExpected := errors.New("any error")
 
-	s.problemRepo.EXPECT().GetManagerProblemForChat(s.Ctx, managerID, chatID).
+	s.problemRepo.EXPECT().GetAssignedProblemID(s.Ctx, managerID, chatID).
 		Return(problemID, nil)
 	s.msgRepo.EXPECT().GetProblemMessages(s.Ctx, problemID, 20, (*messagesrepo.Cursor)(nil)).
 		Return(nil, nil, errExpected)
@@ -169,7 +169,7 @@ func (s *UseCaseSuite) TestGetProblemMessages_Success_SinglePage() {
 		expectedMsgs[2].IsVisibleForManager = false
 	}
 
-	s.problemRepo.EXPECT().GetManagerProblemForChat(s.Ctx, managerID, chatID).
+	s.problemRepo.EXPECT().GetAssignedProblemID(s.Ctx, managerID, chatID).
 		Return(problemID, nil)
 	s.msgRepo.EXPECT().GetProblemMessages(s.Ctx, problemID, pageSize, (*messagesrepo.Cursor)(nil)).
 		Return(expectedMsgs, nil, nil)
@@ -210,7 +210,7 @@ func (s *UseCaseSuite) TestGetProblemMessages_Success_FirstPage() {
 	lastMsg := expectedMsgs[len(expectedMsgs)-1]
 
 	nextCursor := &messagesrepo.Cursor{PageSize: pageSize, LastCreatedAt: lastMsg.CreatedAt}
-	s.problemRepo.EXPECT().GetManagerProblemForChat(s.Ctx, managerID, chatID).
+	s.problemRepo.EXPECT().GetAssignedProblemID(s.Ctx, managerID, chatID).
 		Return(problemID, nil)
 	s.msgRepo.EXPECT().GetProblemMessages(s.Ctx, problemID, pageSize, (*messagesrepo.Cursor)(nil)).
 		Return(expectedMsgs, nextCursor, nil)
@@ -243,7 +243,7 @@ func (s *UseCaseSuite) TestGetProblemMessages_Success_LastPage() {
 	expectedMsgs := s.createMessages(messagesCount, clientID, chatID)
 
 	c := messagesrepo.Cursor{PageSize: pageSize, LastCreatedAt: time.Now()}
-	s.problemRepo.EXPECT().GetManagerProblemForChat(s.Ctx, managerID, chatID).
+	s.problemRepo.EXPECT().GetAssignedProblemID(s.Ctx, managerID, chatID).
 		Return(problemID, nil)
 	s.msgRepo.EXPECT().GetProblemMessages(s.Ctx, problemID, 0, messagesrepo.NewCursorMatcher(c)).
 		Return(expectedMsgs, nil, nil)

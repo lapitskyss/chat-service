@@ -252,6 +252,43 @@ func (s *MsgRepoAPISuite) Test_CreateClientVisible() {
 	}
 }
 
+func (s *MsgRepoAPISuite) Test_CreateFullVisible() {
+	authorID := types.NewUserID()
+
+	// Create chat and problem.
+	problemID, chatID := s.createProblemAndChat(authorID)
+	requestID := types.NewRequestID()
+
+	// Check message was created.
+	msg, err := s.repo.CreateFullVisible(s.Ctx, requestID, problemID, chatID, authorID, msgBody)
+	s.Require().NoError(err)
+	s.Require().NotNil(msg)
+	s.NotEmpty(msg.ID)
+	s.Equal(chatID, msg.ChatID)
+	s.Equal(authorID, msg.AuthorID)
+	s.Equal(msgBody, msg.Body)
+	s.True(msg.IsVisibleForClient)
+	s.True(msg.IsVisibleForManager)
+	s.False(msg.IsBlocked)
+	s.False(msg.IsService)
+	s.Equal(requestID, msg.RequestID)
+
+	{
+		dbMsg, err := s.Database.Message(s.Ctx).Get(s.Ctx, msg.ID)
+		s.Require().NoError(err)
+		s.Require().NotNil(dbMsg)
+
+		s.Run("message is visible for client and for manager both", func() {
+			s.True(dbMsg.IsVisibleForClient)
+			s.True(dbMsg.IsVisibleForManager)
+		})
+
+		s.Run("initial_request_id is set correctly", func() {
+			s.Equal(requestID, dbMsg.InitialRequestID)
+		})
+	}
+}
+
 func (s *MsgRepoAPISuite) Test_CreateServiceMsg() {
 	authorID := types.NewUserID()
 

@@ -22,6 +22,15 @@ func (r *Repo) CreateIfNotExists(ctx context.Context, userID types.UserID) (type
 	return chatID, nil
 }
 
+func (r *Repo) GetChatByID(ctx context.Context, chatID types.ChatID) (*Chat, error) {
+	c, err := r.db.Chat(ctx).Get(ctx, chatID)
+	if err != nil {
+		return nil, fmt.Errorf("find chat %v: %v", chatID, err)
+	}
+	result := adaptChat(c)
+	return &result, nil
+}
+
 func (r *Repo) AllWithOpenProblemsForManager(ctx context.Context, managerID types.UserID) ([]Chat, error) {
 	chats, err := r.db.Chat(ctx).
 		Query().

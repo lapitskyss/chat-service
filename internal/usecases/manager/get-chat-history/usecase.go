@@ -27,7 +27,7 @@ type messagesRepository interface {
 }
 
 type problemsRepository interface {
-	GetManagerProblemForChat(ctx context.Context, managerID types.UserID, chatID types.ChatID) (types.ProblemID, error)
+	GetAssignedProblemID(ctx context.Context, managerID types.UserID, chatID types.ChatID) (types.ProblemID, error)
 }
 
 //go:generate options-gen -out-filename=usecase_options.gen.go -from-struct=Options
@@ -57,7 +57,7 @@ func (u UseCase) Handle(ctx context.Context, req Request) (Response, error) {
 		return Response{}, fmt.Errorf("decode cursor: %w: %v", ErrInvalidCursor, err)
 	}
 
-	problemID, err := u.problemRepo.GetManagerProblemForChat(ctx, req.ManagerID, req.ChatID)
+	problemID, err := u.problemRepo.GetAssignedProblemID(ctx, req.ManagerID, req.ChatID)
 	if err != nil {
 		return Response{}, fmt.Errorf("get manager problem for chat: %v", err)
 	}

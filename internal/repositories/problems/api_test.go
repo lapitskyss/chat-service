@@ -138,7 +138,7 @@ func (s *ProblemsRepoSuite) Test_GetManagerOpenProblemsCount() {
 	})
 }
 
-func (s *ProblemsRepoSuite) Test_GetManagerProblemForChat() {
+func (s *ProblemsRepoSuite) Test_GetAssignedProblemID() {
 	s.Run("manager has problem for chat", func() {
 		clientID := types.NewUserID()
 		managerID := types.NewUserID()
@@ -151,7 +151,7 @@ func (s *ProblemsRepoSuite) Test_GetManagerProblemForChat() {
 		problem, err := s.Database.Problem(s.Ctx).Create().SetChatID(chat.ID).SetManagerID(managerID).Save(s.Ctx)
 		s.Require().NoError(err)
 
-		problemID, err := s.repo.GetManagerProblemForChat(s.Ctx, managerID, chat.ID)
+		problemID, err := s.repo.GetAssignedProblemID(s.Ctx, managerID, chat.ID)
 		s.Require().NoError(err)
 		s.NotEmpty(problemID)
 		s.Equal(problem.ID, problemID)
@@ -175,7 +175,7 @@ func (s *ProblemsRepoSuite) Test_GetManagerProblemForChat() {
 			Save(s.Ctx)
 		s.Require().NoError(err)
 
-		problemID, err := s.repo.GetManagerProblemForChat(s.Ctx, managerID, chat.ID)
+		problemID, err := s.repo.GetAssignedProblemID(s.Ctx, managerID, chat.ID)
 		s.Require().Error(err)
 		s.Empty(problemID)
 	})

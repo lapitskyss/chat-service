@@ -15,6 +15,7 @@ func NewOptions(
 	freeHands freeHandsUseCase,
 	getChatHistory getChatHistoryUseCase,
 	getChats getChatsUseCase,
+	sendMessage sendMessageUseCase,
 	options ...OptOptionsSetter,
 ) Options {
 	o := Options{}
@@ -25,6 +26,7 @@ func NewOptions(
 	o.freeHands = freeHands
 	o.getChatHistory = getChatHistory
 	o.getChats = getChats
+	o.sendMessage = sendMessage
 
 	for _, opt := range options {
 		opt(&o)
@@ -38,6 +40,7 @@ func (o *Options) Validate() error {
 	errs.Add(errors461e464ebed9.NewValidationError("freeHands", _validate_Options_freeHands(o)))
 	errs.Add(errors461e464ebed9.NewValidationError("getChatHistory", _validate_Options_getChatHistory(o)))
 	errs.Add(errors461e464ebed9.NewValidationError("getChats", _validate_Options_getChats(o)))
+	errs.Add(errors461e464ebed9.NewValidationError("sendMessage", _validate_Options_sendMessage(o)))
 	return errs.AsError()
 }
 
@@ -65,6 +68,13 @@ func _validate_Options_getChatHistory(o *Options) error {
 func _validate_Options_getChats(o *Options) error {
 	if err := validator461e464ebed9.GetValidatorFor(o).Var(o.getChats, "required"); err != nil {
 		return fmt461e464ebed9.Errorf("field `getChats` did not pass the test: %w", err)
+	}
+	return nil
+}
+
+func _validate_Options_sendMessage(o *Options) error {
+	if err := validator461e464ebed9.GetValidatorFor(o).Var(o.sendMessage, "required"); err != nil {
+		return fmt461e464ebed9.Errorf("field `sendMessage` did not pass the test: %w", err)
 	}
 	return nil
 }

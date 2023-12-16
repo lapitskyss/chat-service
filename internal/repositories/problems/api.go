@@ -53,7 +53,7 @@ func (r *Repo) GetManagerOpenProblemsCount(ctx context.Context, managerID types.
 	return n, nil
 }
 
-func (r *Repo) GetManagerProblemForChat(
+func (r *Repo) GetAssignedProblemID(
 	ctx context.Context,
 	managerID types.UserID,
 	chatID types.ChatID,
