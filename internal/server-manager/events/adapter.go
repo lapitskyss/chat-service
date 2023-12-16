@@ -48,6 +48,20 @@ func (Adapter) Adapt(ev eventstream.Event) (any, error) {
 		}
 
 		return event, nil
+	case *eventstream.ChatClosedEvent:
+		event := Event{}
+
+		err := event.FromChatClosedEvent(ChatClosedEvent{
+			CanTakeMoreProblems: e.CanTakeMoreProblems,
+			ChatId:              e.ChatID,
+			EventId:             e.EventID,
+			RequestId:           e.RequestID,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("from new message event: %v", err)
+		}
+
+		return event, nil
 	default:
 		return nil, ErrUnexpectedEventType
 	}

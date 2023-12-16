@@ -132,3 +132,30 @@ func NewNewChatEvent(
 func (e NewChatEvent) Validate() error {
 	return validator.Validator.Struct(e)
 }
+
+// ChatClosedEvent is a signal about chat was closed by manager.
+type ChatClosedEvent struct {
+	event
+	EventID             types.EventID   `validate:"required"`
+	ChatID              types.ChatID    `validate:"required"`
+	RequestID           types.RequestID `validate:"required"`
+	CanTakeMoreProblems bool            `validate:"required"`
+}
+
+func NewChatClosedEvent(
+	eventID types.EventID,
+	chatID types.ChatID,
+	requestID types.RequestID,
+	canTakeMoreProblems bool,
+) *ChatClosedEvent {
+	return &ChatClosedEvent{
+		EventID:             eventID,
+		ChatID:              chatID,
+		RequestID:           requestID,
+		CanTakeMoreProblems: canTakeMoreProblems,
+	}
+}
+
+func (e ChatClosedEvent) Validate() error {
+	return validator.Validator.Struct(e)
+}

@@ -22,6 +22,7 @@ import (
 	"github.com/lapitskyss/chat-service/internal/services/outbox"
 	"github.com/lapitskyss/chat-service/internal/store"
 	canreceiveproblems "github.com/lapitskyss/chat-service/internal/usecases/manager/can-receive-problems"
+	closechat "github.com/lapitskyss/chat-service/internal/usecases/manager/close-chat"
 	freehands "github.com/lapitskyss/chat-service/internal/usecases/manager/free-hands"
 	getchathistory "github.com/lapitskyss/chat-service/internal/usecases/manager/get-chat-history"
 	getchats "github.com/lapitskyss/chat-service/internal/usecases/manager/get-chats"
@@ -62,6 +63,15 @@ func initServerManager(
 	if err != nil {
 		return nil, fmt.Errorf("canreceiveproblems usecase: %v", err)
 	}
+	closeChatUseCase, err := closechat.New(closechat.NewOptions(
+		msgRepo,
+		outboxSvc,
+		problemRepo,
+		db,
+	))
+	if err != nil {
+		return nil, fmt.Errorf("closechat usecase: %v", err)
+	}
 	freeHandsUseCase, err := freehands.New(freehands.NewOptions(
 		managerLoadSvc,
 		managerPool,
@@ -94,6 +104,7 @@ func initServerManager(
 
 	v1Handlers, err := managerv1.NewHandlers(managerv1.NewOptions(
 		canReceiveProblemUseCase,
+		closeChatUseCase,
 		freeHandsUseCase,
 		getChatHistoryUseCase,
 		getChatsUseCase,

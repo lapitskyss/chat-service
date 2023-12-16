@@ -20,6 +20,15 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
+// ChatClosedEvent defines model for ChatClosedEvent.
+type ChatClosedEvent struct {
+	CanTakeMoreProblems bool            `json:"canTakeMoreProblems"`
+	ChatId              types.ChatID    `json:"chatId"`
+	EventId             types.EventID   `json:"eventId"`
+	EventType           string          `json:"eventType"`
+	RequestId           types.RequestID `json:"requestId"`
+}
+
 // Event defines model for Event.
 type Event struct {
 	union json.RawMessage
@@ -103,6 +112,34 @@ func (t *Event) MergeNewMessageEvent(v NewMessageEvent) error {
 	return err
 }
 
+// AsChatClosedEvent returns the union data inside the Event as a ChatClosedEvent
+func (t Event) AsChatClosedEvent() (ChatClosedEvent, error) {
+	var body ChatClosedEvent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChatClosedEvent overwrites any union data inside the Event as the provided ChatClosedEvent
+func (t *Event) FromChatClosedEvent(v ChatClosedEvent) error {
+	v.EventType = "ChatClosedEvent"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChatClosedEvent performs a merge with any union data inside the Event, using the provided ChatClosedEvent
+func (t *Event) MergeChatClosedEvent(v ChatClosedEvent) error {
+	v.EventType = "ChatClosedEvent"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JsonMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
 func (t Event) Discriminator() (string, error) {
 	var discriminator struct {
 		Discriminator string `json:"eventType"`
@@ -117,6 +154,8 @@ func (t Event) ValueByDiscriminator() (interface{}, error) {
 		return nil, err
 	}
 	switch discriminator {
+	case "ChatClosedEvent":
+		return t.AsChatClosedEvent()
 	case "NewChatEvent":
 		return t.AsNewChatEvent()
 	case "NewMessageEvent":
@@ -139,15 +178,16 @@ func (t *Event) UnmarshalJSON(b []byte) error {
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/9SWT28aPRDGvwqa9z0uLFEvkW9t00MOpFWbnqIcht2BdfG/2rNQhPju1ZgNLEnaVEhI",
-	"yQnLHtu/mXkevBuovA3ekeMEagOpashiHn5akmMZ1DpVUVvtkH2UCYshaDeX4Q2tPjbIXSz8Vx6OK7uz",
-	"yqOYQrZMKCWc00u7jsK2BYToA0Ve36AlUEAyf7sOJGve0ecZqLsN/B9p9k8o2+LF4GOC+23xKOHNA5Om",
-	"XLMK3S0uaOIjfYl+asjmaRZIBVPvDaET3KpBvq5lbeajRalC2+oaiofYxFFKXMCv4dwPu0n5SSO5//qq",
-	"vzTUNvi440FuQMFcc9NOR5W3pcGgOS3WKZVy6zBRXOqKSu2YokNT5lNhK1RGkzuZ63uieB6u3OlTsXKr",
-	"zsiVFXhockeyLSDSz5bSydxfu+1nIO/gdKQa1N2zqt1LtKeKQyP6qfcTvd8n5qc/qMqufeL3x6bBlhsf",
-	"X5/qpr5eP9vYV2reSMhUv+cjsBqZhqwtPaF7s76yOzWdyt2J8Tzkb8bze9N1Ou/7fS+kPxn+0IG/m18u",
-	"1W7mcxs1G1n7gG4x+NYGSWkgbhhM0OGc4iALSv55lhST9g4ULC/y2x7IYdCg4N3oYjSGItchgXKtMQVI",
-	"yhRTfvxrkm+VwLvtV7Qk44Mlx4NdFBTQRgMKVkmVpfEVmsYnVpfjy3G5SvLG/w4AAP//Pzd6WhMJAAA=",
+	"H4sIAAAAAAAC/+xWzW7bPBB8FWO/70hbDnoJeGuTHnJwWrTpKciBltYWa/6VXMk1DL17QVqRbcV1ChcG",
+	"kqAnCctdcWY5s+IacqudNWgoAF9DyEvUIr1elYKulA1YfKzRUAw5bx16kpgScmHuxAIn1uNnb6cKdQrT",
+	"yiFwmFqrUBhoGOSloJsirs2s14KAQ1XJAthjbiAvzRwY/BzO7bANxkcYRRQ317tLQ6md9Rs8gkrgMJdU",
+	"VtNRbnWmhJMUFqsQsrjrMKCvZY6ZNITeCJWlr0LTMMDI6lRYqSVnxHWXNlv3kDQMPP6oMJyM+0tbfgbk",
+	"LTjpsQB+f1AdnRS23d/lu8vuoWNjp98xp8i902EhQ+6llkaQ9TGghXOR8iHZwn/ZVuNZK/Csn8bgFpcx",
+	"eLRqLyeVTDAEMcfnqvbSGvbopNWt0JHjtgcNA2vw0wz4/Rr+9zj7IygNeza5h+B4fr87zUPTb9Abmwa5",
+	"kn8xDr4F9P+m1NubUp0qThtYT+ZD3zSiotL6l6e6qS1WBw/2hZrXoyAs3tMesEIQDklqfILu1fpKb9R0",
+	"Ku5WjOdB/mo835mu1fmu3zsh/c7w2xM4bv64qTQzm45RkoprH4RZDL5WLlIaRDcMJsKIOfpBElScPDX6",
+	"IK0BDvVFugs4NMJJ4PBudDEaA0t9CMBNpRSDSBl9SJeFAuOlyNGm/BprVNZpNDTYZAGDyivgsAw8y5TN",
+	"hSptIH45vhxnyxD/8b8CAAD//76UodsODAAA",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

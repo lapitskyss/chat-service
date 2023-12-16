@@ -35,6 +35,7 @@ import (
 	clientmessageblockedjob "github.com/lapitskyss/chat-service/internal/services/outbox/jobs/client-message-blocked"
 	clientmessagesentjob "github.com/lapitskyss/chat-service/internal/services/outbox/jobs/client-message-sent"
 	managerassignedtoproblemjob "github.com/lapitskyss/chat-service/internal/services/outbox/jobs/manager-assigned-to-problem"
+	managerclosechatjob "github.com/lapitskyss/chat-service/internal/services/outbox/jobs/manager-close-chat"
 	sendclientmessagejob "github.com/lapitskyss/chat-service/internal/services/outbox/jobs/send-client-message"
 	sendmanagermessagejob "github.com/lapitskyss/chat-service/internal/services/outbox/jobs/send-manager-message"
 	"github.com/lapitskyss/chat-service/internal/store"
@@ -243,6 +244,18 @@ func run() (errReturned error) {
 	err = outBox.RegisterJob(sendManagerMessageJob)
 	if err != nil {
 		return fmt.Errorf("register send manager message job: %v", err)
+	}
+	managerCloseChatJob, err := managerclosechatjob.New(managerclosechatjob.NewOptions(
+		msgRepo,
+		eventsStream,
+		managerLoad,
+	))
+	if err != nil {
+		return fmt.Errorf("manager close chat job: %v", err)
+	}
+	err = outBox.RegisterJob(managerCloseChatJob)
+	if err != nil {
+		return fmt.Errorf("manager close chat job: %v", err)
 	}
 
 	err = outBox.Run(ctx)

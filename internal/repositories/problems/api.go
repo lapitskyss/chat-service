@@ -2,13 +2,17 @@ package problemsrepo
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/lapitskyss/chat-service/internal/store"
 	"github.com/lapitskyss/chat-service/internal/store/chat"
 	"github.com/lapitskyss/chat-service/internal/store/problem"
 	"github.com/lapitskyss/chat-service/internal/types"
 )
+
+var ErrProblemNotFound = errors.New("problem not found")
 
 func (r *Repo) Create(ctx context.Context, chatID types.ChatID) (types.ProblemID, error) {
 	p, err := r.db.Problem(ctx).
@@ -67,7 +71,21 @@ func (r *Repo) GetAssignedProblemID(
 		).
 		OnlyID(ctx)
 	if err != nil {
+		if store.IsNotFound(err) {
+			return types.ProblemIDNil, ErrProblemNotFound
+		}
 		return types.ProblemIDNil, fmt.Errorf("get manager problem for chat: %v", err)
 	}
 	return p, nil
+}
+
+func (r *Repo) ResolveProblem(ctx context.Context, problemID types.ProblemID) error {
+	err := r.db.Problem(ctx).
+		UpdateOneID(problemID).
+		SetResolvedAt(time.Now()).
+		Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("resolve problem: %v", err)
+	}
+	return nil
 }

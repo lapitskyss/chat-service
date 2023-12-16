@@ -181,6 +181,28 @@ func (s *ProblemsRepoSuite) Test_GetAssignedProblemID() {
 	})
 }
 
+func (s *ProblemsRepoSuite) Test_ResolveProblem() {
+	// Arrange.
+	s.Run("resolve problem", func() {
+		// Arrange.
+		clientID := types.NewUserID()
+		managerID := types.NewUserID()
+
+		chat, err := s.Database.Chat(s.Ctx).Create().SetClientID(clientID).Save(s.Ctx)
+		s.Require().NoError(err)
+		problem, err := s.Database.Problem(s.Ctx).Create().SetChatID(chat.ID).SetManagerID(managerID).Save(s.Ctx)
+		s.Require().NoError(err)
+
+		// Action.
+		err = s.repo.ResolveProblem(s.Ctx, problem.ID)
+		s.Require().NoError(err)
+
+		// Assert.
+		p := s.Database.Problem(s.Ctx).GetX(s.Ctx, problem.ID)
+		s.NotEmpty(p.ResolvedAt)
+	})
+}
+
 func (s *ProblemsRepoSuite) createChatWithProblemAssignedTo(managerID types.UserID) types.ProblemID {
 	s.T().Helper()
 

@@ -80,6 +80,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SendMessageResponse"
+  /closeChat:
+    post:
+      description: Send new message to the chat.
+      parameters:
+        - $ref: "#/components/parameters/XRequestIDHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CloseChatRequest"
+      responses:
+        '200':
+          description: Message created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CloseChatResponse"
 
 security:
   - bearerAuth: [ ]
@@ -131,8 +149,10 @@ components:
       description: contains HTTP error codes and specific business logic error codes (the last must be >= 1000).
       enum:
         - 5000
+        - 5001
       x-enum-varnames:
         - ErrorCodeManagerOverloaded
+        - ErrorCodeNoActiveProblemInChat
       minimum: 400
 
     # /getFreeHandsBtnAvailability
@@ -242,6 +262,7 @@ components:
           type: string
           format: date-time
 
+    # /sendMessage
     SendMessageRequest:
       allOf:
         - $ref: "#/components/schemas/ChatId"
@@ -278,3 +299,24 @@ components:
         createdAt:
           type: string
           format: date-time
+
+    # /closeChat
+    CloseChatRequest:
+      required: [ chatId ]
+      properties:
+        chatId:
+          type: string
+          format: uuid
+          x-go-type: types.ChatID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+
+    CloseChatResponse:
+      properties:
+        data:
+          $ref: "#/components/schemas/CloseChat"
+        error:
+          $ref: "#/components/schemas/Error"
+
+    CloseChat:
+      required: [ ]

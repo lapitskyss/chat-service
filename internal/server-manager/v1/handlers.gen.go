@@ -12,6 +12,7 @@ type OptOptionsSetter func(o *Options)
 
 func NewOptions(
 	canReceiveProblems canReceiveProblemsUseCase,
+	closeChat closeChatUseCase,
 	freeHands freeHandsUseCase,
 	getChatHistory getChatHistoryUseCase,
 	getChats getChatsUseCase,
@@ -23,6 +24,7 @@ func NewOptions(
 	// Setting defaults from field tag (if present)
 
 	o.canReceiveProblems = canReceiveProblems
+	o.closeChat = closeChat
 	o.freeHands = freeHands
 	o.getChatHistory = getChatHistory
 	o.getChats = getChats
@@ -37,6 +39,7 @@ func NewOptions(
 func (o *Options) Validate() error {
 	errs := new(errors461e464ebed9.ValidationErrors)
 	errs.Add(errors461e464ebed9.NewValidationError("canReceiveProblems", _validate_Options_canReceiveProblems(o)))
+	errs.Add(errors461e464ebed9.NewValidationError("closeChat", _validate_Options_closeChat(o)))
 	errs.Add(errors461e464ebed9.NewValidationError("freeHands", _validate_Options_freeHands(o)))
 	errs.Add(errors461e464ebed9.NewValidationError("getChatHistory", _validate_Options_getChatHistory(o)))
 	errs.Add(errors461e464ebed9.NewValidationError("getChats", _validate_Options_getChats(o)))
@@ -47,6 +50,13 @@ func (o *Options) Validate() error {
 func _validate_Options_canReceiveProblems(o *Options) error {
 	if err := validator461e464ebed9.GetValidatorFor(o).Var(o.canReceiveProblems, "required"); err != nil {
 		return fmt461e464ebed9.Errorf("field `canReceiveProblems` did not pass the test: %w", err)
+	}
+	return nil
+}
+
+func _validate_Options_closeChat(o *Options) error {
+	if err := validator461e464ebed9.GetValidatorFor(o).Var(o.closeChat, "required"); err != nil {
+		return fmt461e464ebed9.Errorf("field `closeChat` did not pass the test: %w", err)
 	}
 	return nil
 }

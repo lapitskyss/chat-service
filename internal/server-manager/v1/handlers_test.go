@@ -22,6 +22,7 @@ type HandlersSuite struct {
 
 	ctrl                      *gomock.Controller
 	canReceiveProblemsUseCase *managerv1mocks.MockcanReceiveProblemsUseCase
+	closeChatUseCase          *managerv1mocks.MockcloseChatUseCase
 	freeHandsUseCase          *managerv1mocks.MockfreeHandsUseCase
 	getChatHistoryUseCase     *managerv1mocks.MockgetChatHistoryUseCase
 	getChatsUseCase           *managerv1mocks.MockgetChatsUseCase
@@ -39,6 +40,7 @@ func TestHandlersSuite(t *testing.T) {
 func (s *HandlersSuite) SetupTest() {
 	s.ctrl = gomock.NewController(s.T())
 	s.canReceiveProblemsUseCase = managerv1mocks.NewMockcanReceiveProblemsUseCase(s.ctrl)
+	s.closeChatUseCase = managerv1mocks.NewMockcloseChatUseCase(s.ctrl)
 	s.freeHandsUseCase = managerv1mocks.NewMockfreeHandsUseCase(s.ctrl)
 	s.getChatHistoryUseCase = managerv1mocks.NewMockgetChatHistoryUseCase(s.ctrl)
 	s.getChatsUseCase = managerv1mocks.NewMockgetChatsUseCase(s.ctrl)
@@ -47,6 +49,7 @@ func (s *HandlersSuite) SetupTest() {
 		var err error
 		s.handlers, err = managerv1.NewHandlers(managerv1.NewOptions(
 			s.canReceiveProblemsUseCase,
+			s.closeChatUseCase,
 			s.freeHandsUseCase,
 			s.getChatHistoryUseCase,
 			s.getChatsUseCase,
