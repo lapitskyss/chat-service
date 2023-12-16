@@ -10,6 +10,7 @@ import (
 	svcerr "github.com/lapitskyss/chat-service/internal/errors"
 	canreceiveproblems "github.com/lapitskyss/chat-service/internal/usecases/manager/can-receive-problems"
 	freehands "github.com/lapitskyss/chat-service/internal/usecases/manager/free-hands"
+	getchathistory "github.com/lapitskyss/chat-service/internal/usecases/manager/get-chat-history"
 	getchats "github.com/lapitskyss/chat-service/internal/usecases/manager/get-chats"
 )
 
@@ -25,6 +26,10 @@ type freeHandsUseCase interface {
 	Handle(ctx context.Context, req freehands.Request) error
 }
 
+type getChatHistoryUseCase interface {
+	Handle(ctx context.Context, req getchathistory.Request) (getchathistory.Response, error)
+}
+
 type getChatsUseCase interface {
 	Handle(ctx context.Context, req getchats.Request) (getchats.Response, error)
 }
@@ -33,6 +38,7 @@ type getChatsUseCase interface {
 type Options struct {
 	canReceiveProblems canReceiveProblemsUseCase `option:"mandatory" validate:"required"`
 	freeHands          freeHandsUseCase          `option:"mandatory" validate:"required"`
+	getChatHistory     getChatHistoryUseCase     `option:"mandatory" validate:"required"`
 	getChats           getChatsUseCase           `option:"mandatory" validate:"required"`
 }
 

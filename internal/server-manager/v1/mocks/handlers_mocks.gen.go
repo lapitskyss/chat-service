@@ -14,6 +14,7 @@ import (
 
 	canreceiveproblems "github.com/lapitskyss/chat-service/internal/usecases/manager/can-receive-problems"
 	freehands "github.com/lapitskyss/chat-service/internal/usecases/manager/free-hands"
+	getchathistory "github.com/lapitskyss/chat-service/internal/usecases/manager/get-chat-history"
 	getchats "github.com/lapitskyss/chat-service/internal/usecases/manager/get-chats"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -91,6 +92,44 @@ func (m *MockfreeHandsUseCase) Handle(ctx context.Context, req freehands.Request
 func (mr *MockfreeHandsUseCaseMockRecorder) Handle(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Handle", reflect.TypeOf((*MockfreeHandsUseCase)(nil).Handle), ctx, req)
+}
+
+// MockgetChatHistoryUseCase is a mock of getChatHistoryUseCase interface.
+type MockgetChatHistoryUseCase struct {
+	ctrl     *gomock.Controller
+	recorder *MockgetChatHistoryUseCaseMockRecorder
+}
+
+// MockgetChatHistoryUseCaseMockRecorder is the mock recorder for MockgetChatHistoryUseCase.
+type MockgetChatHistoryUseCaseMockRecorder struct {
+	mock *MockgetChatHistoryUseCase
+}
+
+// NewMockgetChatHistoryUseCase creates a new mock instance.
+func NewMockgetChatHistoryUseCase(ctrl *gomock.Controller) *MockgetChatHistoryUseCase {
+	mock := &MockgetChatHistoryUseCase{ctrl: ctrl}
+	mock.recorder = &MockgetChatHistoryUseCaseMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockgetChatHistoryUseCase) EXPECT() *MockgetChatHistoryUseCaseMockRecorder {
+	return m.recorder
+}
+
+// Handle mocks base method.
+func (m *MockgetChatHistoryUseCase) Handle(ctx context.Context, req getchathistory.Request) (getchathistory.Response, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Handle", ctx, req)
+	ret0, _ := ret[0].(getchathistory.Response)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Handle indicates an expected call of Handle.
+func (mr *MockgetChatHistoryUseCaseMockRecorder) Handle(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Handle", reflect.TypeOf((*MockgetChatHistoryUseCase)(nil).Handle), ctx, req)
 }
 
 // MockgetChatsUseCase is a mock of getChatsUseCase interface.

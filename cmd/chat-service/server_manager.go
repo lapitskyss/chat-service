@@ -8,6 +8,8 @@ import (
 
 	keycloakclient "github.com/lapitskyss/chat-service/internal/clients/keycloak"
 	chatsrepo "github.com/lapitskyss/chat-service/internal/repositories/chats"
+	messagesrepo "github.com/lapitskyss/chat-service/internal/repositories/messages"
+	problemsrepo "github.com/lapitskyss/chat-service/internal/repositories/problems"
 	"github.com/lapitskyss/chat-service/internal/server"
 	servermanager "github.com/lapitskyss/chat-service/internal/server-manager"
 	managererrhandler "github.com/lapitskyss/chat-service/internal/server-manager/errhandler"
@@ -19,6 +21,7 @@ import (
 	managerpool "github.com/lapitskyss/chat-service/internal/services/manager-pool"
 	canreceiveproblems "github.com/lapitskyss/chat-service/internal/usecases/manager/can-receive-problems"
 	freehands "github.com/lapitskyss/chat-service/internal/usecases/manager/free-hands"
+	getchathistory "github.com/lapitskyss/chat-service/internal/usecases/manager/get-chat-history"
 	getchats "github.com/lapitskyss/chat-service/internal/usecases/manager/get-chats"
 	websocketstream "github.com/lapitskyss/chat-service/internal/websocket-stream"
 )
@@ -38,6 +41,8 @@ func initServerManager(
 	requiredRole string,
 
 	chatRepo *chatsrepo.Repo,
+	msgRepo *messagesrepo.Repo,
+	problemRepo *problemsrepo.Repo,
 
 	eventStream eventstream.EventStream,
 	managerLoadSvc *managerload.Service,
@@ -59,6 +64,13 @@ func initServerManager(
 	if err != nil {
 		return nil, fmt.Errorf("freehands usecase: %v", err)
 	}
+	getChatHistoryUseCase, err := getchathistory.New(getchathistory.NewOptions(
+		msgRepo,
+		problemRepo,
+	))
+	if err != nil {
+		return nil, fmt.Errorf("getchats usecase: %v", err)
+	}
 	getChatsUseCase, err := getchats.New(getchats.NewOptions(
 		chatRepo,
 	))
@@ -69,6 +81,7 @@ func initServerManager(
 	v1Handlers, err := managerv1.NewHandlers(managerv1.NewOptions(
 		canReceiveProblemUseCase,
 		freeHandsUseCase,
+		getChatHistoryUseCase,
 		getChatsUseCase,
 	))
 	if err != nil {

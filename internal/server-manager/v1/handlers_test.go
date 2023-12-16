@@ -23,6 +23,7 @@ type HandlersSuite struct {
 	ctrl                      *gomock.Controller
 	canReceiveProblemsUseCase *managerv1mocks.MockcanReceiveProblemsUseCase
 	freeHandsUseCase          *managerv1mocks.MockfreeHandsUseCase
+	getChatHistoryUseCase     *managerv1mocks.MockgetChatHistoryUseCase
 	getChatsUseCase           *managerv1mocks.MockgetChatsUseCase
 	handlers                  managerv1.Handlers
 
@@ -38,12 +39,14 @@ func (s *HandlersSuite) SetupTest() {
 	s.ctrl = gomock.NewController(s.T())
 	s.canReceiveProblemsUseCase = managerv1mocks.NewMockcanReceiveProblemsUseCase(s.ctrl)
 	s.freeHandsUseCase = managerv1mocks.NewMockfreeHandsUseCase(s.ctrl)
+	s.getChatHistoryUseCase = managerv1mocks.NewMockgetChatHistoryUseCase(s.ctrl)
 	s.getChatsUseCase = managerv1mocks.NewMockgetChatsUseCase(s.ctrl)
 	{
 		var err error
 		s.handlers, err = managerv1.NewHandlers(managerv1.NewOptions(
 			s.canReceiveProblemsUseCase,
 			s.freeHandsUseCase,
+			s.getChatHistoryUseCase,
 			s.getChatsUseCase,
 		))
 		s.Require().NoError(err)
@@ -62,7 +65,7 @@ func (s *HandlersSuite) TearDownTest() {
 func (s *HandlersSuite) newEchoCtx(
 	requestID types.RequestID,
 	path string,
-	body string, //nolint:unparam
+	body string,
 ) (*httptest.ResponseRecorder, echo.Context) {
 	req := httptest.NewRequest(http.MethodPost, path, bytes.NewBufferString(body))
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)

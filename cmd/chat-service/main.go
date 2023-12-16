@@ -304,6 +304,8 @@ func run() (errReturned error) {
 		cfg.Servers.Manager.RequiredAccess.Resource,
 		cfg.Servers.Manager.RequiredAccess.Role,
 		chatRepo,
+		msgRepo,
+		problemRepo,
 		eventsStream,
 		managerLoad,
 		managerPool,

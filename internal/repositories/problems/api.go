@@ -52,3 +52,22 @@ func (r *Repo) GetManagerOpenProblemsCount(ctx context.Context, managerID types.
 	}
 	return n, nil
 }
+
+func (r *Repo) GetManagerProblemForChat(
+	ctx context.Context,
+	managerID types.UserID,
+	chatID types.ChatID,
+) (types.ProblemID, error) {
+	p, err := r.db.Problem(ctx).
+		Query().
+		Where(
+			problem.ManagerID(managerID),
+			problem.ResolvedAtIsNil(),
+			problem.ChatID(chatID),
+		).
+		OnlyID(ctx)
+	if err != nil {
+		return types.ProblemIDNil, fmt.Errorf("get manager problem for chat: %v", err)
+	}
+	return p, nil
+}
