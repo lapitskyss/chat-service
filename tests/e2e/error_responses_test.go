@@ -25,6 +25,7 @@ var _ = Describe("Error Responses", Ordered, func() {
 
 	BeforeAll(func() {
 		ctx, cancel = context.WithCancel(suiteCtx)
+
 		apiClientV1, _ = newClientAPI(ctx, clientsPool.Get())
 	})
 

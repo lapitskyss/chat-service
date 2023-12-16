@@ -4,6 +4,7 @@ package e2e_test
 
 import (
 	"context"
+	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -13,7 +14,7 @@ import (
 	wsstream "github.com/lapitskyss/chat-service/tests/e2e/ws-stream"
 )
 
-var _ = Describe("Client Events Smoke", Ordered, func() {
+var _ = Describe("Manager Scheduling Smoke", Ordered, func() {
 	var (
 		ctx    context.Context
 		cancel context.CancelFunc
@@ -64,39 +65,65 @@ var _ = Describe("Client Events Smoke", Ordered, func() {
 		Expect(<-managerStreamErrCh).ShouldNot(HaveOccurred())
 	})
 
-	It("client message was sent to manager", func() {
-		err := clientChat.SendMessage(ctx, "Hello, sir!")
-		Expect(err).ShouldNot(HaveOccurred())
-
-		waitForEvent(clientStream) // NewMessageEvent.
-		waitForEvent(clientStream) // MessageSentEvent.
-
-		msg, ok := clientChat.LastMessage()
-		Expect(ok).Should(BeTrue())
-		Expect(msg.IsReceived).Should(BeTrue())
-		Expect(msg.IsBlocked).Should(BeFalse())
-	})
-
-	It("client message was blocked", func() {
-		err := clientChat.SendMessage(ctx, "My CVC is 678")
-		Expect(err).ShouldNot(HaveOccurred())
-
-		waitForEvent(clientStream) // NewMessageEvent.
-		waitForEvent(clientStream) // MessageBlockedEvent.
-
-		msg, ok := clientChat.LastMessage()
-		Expect(ok).Should(BeTrue())
-		Expect(msg.IsReceived).Should(BeFalse())
-		Expect(msg.IsBlocked).Should(BeTrue())
-	})
-
-	It("some garbage collection: assign chat to manager", func() {
+	It("no chats at the start of working day", func() {
 		err := managerWs.Refresh(ctx)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		err = managerWs.ReadyToNewProblems(ctx)
+		n := managerWs.ChatsCount()
+		Expect(n).Should(Equal(0))
+	})
+
+	It("manager assigned to new problem", func() {
+		err := managerWs.ReadyToNewProblems(ctx)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		waitForEvent(managerStream) // NewChatEvent.
+		err = clientChat.SendMessage(ctx, "Hello, sir!")
+		Expect(err).ShouldNot(HaveOccurred())
+
+		// Client side.
+
+		waitForEvent(clientStream) // NewMessageEvent.
+		waitForEvent(clientStream) // MessageSentEvent.
+		waitForEvent(clientStream) // NewMessageEvent (service).
+
+		msg, ok := clientChat.LastMessage()
+		Expect(ok).Should(BeTrue())
+		Expect(msg.Body).Should(Equal(fmt.Sprintf("Manager %s will answer you", managerWs.ManagerID())))
+
+		// Manager side.
+
+		waitForEvent(managerStream)         // NewChatEvent.
+		waitForOptionalEvent(managerStream) // NewMessageEvent.
+
+		n := managerWs.ChatsCount()
+		Expect(n).Should(Equal(1))
+
+		newChat, ok := managerWs.LastChat()
+		Expect(ok).Should(BeTrue())
+		Expect(newChat.ClientID.String()).Should(Equal(clientChat.ClientID().String()))
+		Expect(newChat.ID).ShouldNot(BeEmpty())
+	})
+
+	It("assigned problem does not disappear", func() {
+		err := managerWs.Refresh(ctx)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		n := managerWs.ChatsCount()
+		Expect(n).Should(Equal(1))
+	})
+
+	It("manager see chat history", func() {
+		lastChat, ok := managerWs.LastChat()
+		Expect(ok).Should(BeTrue())
+
+		n := lastChat.MessagesCount()
+		Expect(n).Should(Equal(1))
+
+		lastMsg, ok := lastChat.LastMessage()
+		Expect(ok).Should(BeTrue())
+		Expect(lastMsg.ID).ShouldNot(BeEmpty())
+		Expect(lastMsg.ChatID).Should(Equal(lastChat.ID))
+		Expect(lastMsg.AuthorID.String()).Should(Equal(clientChat.ClientID().String()))
+		Expect(lastMsg.CreatedAt.IsZero()).Should(BeFalse())
 	})
 })

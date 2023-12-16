@@ -65,6 +65,12 @@ vars:
   E2E_CLIENT_EVENTS_DST: ./tests/e2e/api/client/events/client.gen.go
   E2E_CLIENT_EVENTS_PKG: apiclientevents
 
+  E2E_MANAGER_V1_DST: ./tests/e2e/api/manager/v1/client.gen.go
+  E2E_MANAGER_V1_PKG: apimanagerv1
+
+  E2E_MANAGER_EVENTS_DST: ./tests/e2e/api/manager/events/events.gen.go
+  E2E_MANAGER_EVENTS_PKG: apimanagerevents
+
 tasks:
   default:
     cmds:
@@ -131,12 +137,19 @@ tasks:
       E2E_CLIENT_WS_ENDPOINT: ws://localhost:8080/ws
       E2E_CLIENT_WS_SEC_PROTOCOL: chat-service-protocol
       E2E_CLIENT_WS_ORIGIN: http://localhost:3000 # Emulate client UI.
+
+      E2E_MANAGER_V1_API_ENDPOINT: http://localhost:8081/v1
+      E2E_MANAGER_WS_ENDPOINT: ws://localhost:8081/ws
+      E2E_MANAGER_WS_SEC_PROTOCOL: chat-service-protocol
+      E2E_MANAGER_WS_ORIGIN: http://localhost:3001 # Emulate manager UI.
+
       E2E_KEYCLOAK_BASE_PATH: http://localhost:3010
       E2E_KEYCLOAK_REALM: Bank
       E2E_KEYCLOAK_CLIENT_ID: e2e-testing
       E2E_KEYCLOAK_CLIENT_SECRET: IwF4kEKxLhgJeW9rdenZ1NEJijpf5Dww
       E2E_KEYCLOAK_CLIENT_DEBUG: false
-      E2E_KEYCLOAK_CLIENTS: e2e_client_0,e2e_client_1,e2e_client_2
+      E2E_KEYCLOAK_CLIENTS: e2e_client_0,e2e_client_1,e2e_client_2,e2e_client_3
+      E2E_KEYCLOAK_MANAGERS: e2e_manager_0,e2e_manager_1,e2e_manager_2,e2e_manager_3
     cmds:
       - echo "- End-to-end tests..."
       # NOTE: It's important to run tests serial (without `-p` flag) – for correct `clientsPool` sharing.
@@ -233,4 +246,8 @@ tasks:
       - oapi-codegen --old-config-style -generate types,client -package {{.E2E_CLIENT_V1_PKG}} {{.CLIENT_V1_SRC}} > {{.E2E_CLIENT_V1_DST}}
       - echo "[E2E] Generate client events..."
       - oapi-codegen --old-config-style -generate skip-prune,types -package {{.E2E_CLIENT_EVENTS_PKG}} {{.CLIENT_EVENTS_SRC}} > {{.E2E_CLIENT_EVENTS_DST}}
+      - echo "[E2E] Generate manager API..."
+      - oapi-codegen --old-config-style -generate types,client -package {{.E2E_MANAGER_V1_PKG}} {{.MANAGER_V1_SRC}} > {{.E2E_MANAGER_V1_DST}}
+      - echo "[E2E] Generate manager events..."
+      - oapi-codegen --old-config-style -generate skip-prune,types -package {{.E2E_MANAGER_EVENTS_PKG}} {{.MANAGER_EVENTS_SRC}} > {{.E2E_MANAGER_EVENTS_DST}}
       - task: tidy
