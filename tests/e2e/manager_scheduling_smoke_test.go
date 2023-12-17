@@ -126,4 +126,67 @@ var _ = Describe("Manager Scheduling Smoke", Ordered, func() {
 		Expect(lastMsg.AuthorID.String()).Should(Equal(clientChat.ClientID().String()))
 		Expect(lastMsg.CreatedAt.IsZero()).Should(BeFalse())
 	})
+
+	It("manager answers back", func() {
+		lastChat, ok := managerWs.LastChat()
+		Expect(ok).Should(BeTrue())
+
+		err := managerWs.SendMessage(ctx, lastChat.ID, "some msg")
+		Expect(err).ShouldNot(HaveOccurred())
+
+		waitForEvent(clientStream)
+
+		lastMsg, ok := clientChat.LastMessage()
+		Expect(ok).Should(BeTrue())
+		Expect(lastMsg.AuthorID.String()).Should(Equal(managerWs.ManagerID().String()))
+
+		waitForEvent(managerStream)
+
+		lastChat, ok = managerWs.LastChat()
+		Expect(ok).Should(BeTrue())
+		msg, ok := lastChat.LastMessage()
+		Expect(ok).Should(BeTrue())
+		Expect(msg.ID).ShouldNot(BeEmpty())
+		Expect(msg.AuthorID.String()).Should(Equal(managerWs.ManagerID().String()))
+		Expect(msg.Body).Should(Equal("some msg"))
+		Expect(msg.CreatedAt.IsZero()).Should(BeFalse())
+
+		err = managerWs.Refresh(ctx)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		lastChat, ok = managerWs.LastChat()
+		Expect(ok).Should(BeTrue())
+
+		count := lastChat.MessagesCount()
+		Expect(count).Should(Equal(2))
+	})
+
+	It("manager closes chat", func() {
+		lastChat, ok := managerWs.LastChat()
+		Expect(ok).Should(BeTrue())
+
+		chatsCount := managerWs.ChatsCount()
+
+		err := managerWs.CloseChat(ctx, lastChat.ID)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		waitForEvent(managerStream)
+
+		Expect(chatsCount-1 == managerWs.ChatsCount()).Should(BeTrue())
+
+		canTakeMoreProblem := managerWs.CanTakeMoreProblems()
+		Expect(canTakeMoreProblem).Should(BeTrue())
+
+		waitForEvent(clientStream)
+
+		msg, ok := clientChat.LastMessage()
+		Expect(ok).Should(BeTrue())
+		Expect(msg.Body).Should(Equal("Your question has been marked as resolved.\nThank you for being with us!"))
+
+		err = clientChat.Refresh(ctx)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		n := clientChat.MessagesCount()
+		Expect(n).Should(Equal(4))
+	})
 })

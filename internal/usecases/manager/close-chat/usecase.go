@@ -80,12 +80,12 @@ func (u UseCase) Handle(ctx context.Context, req Request) error {
 		if err != nil {
 			return fmt.Errorf("problems repo, resolve problem: %v", err)
 		}
+		msgBody := "Your question has been marked as resolved.\nThank you for being with us!"
 		msg, err := u.msgRepo.CreateServiceMsg(ctx,
 			req.ID,
 			problemID,
 			req.ChatID,
-			`Your question has been marked as resolved.
-Thank you for being with us!`,
+			msgBody,
 			true,
 			false,
 		)

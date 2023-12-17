@@ -85,12 +85,12 @@ func (j *Job) Handle(ctx context.Context, payload string) error {
 	})
 
 	eg.Go(func() error {
-		err = j.eventStream.Publish(ctx, msg.ManagerID, &eventstream.ChatClosedEvent{
-			EventID:             types.NewEventID(),
-			ChatID:              msg.ChatID,
-			RequestID:           msg.RequestID,
-			CanTakeMoreProblems: canTakeMoreProblems,
-		})
+		err = j.eventStream.Publish(ctx, msg.ManagerID, eventstream.NewChatClosedEvent(
+			types.NewEventID(),
+			msg.ChatID,
+			msg.RequestID,
+			canTakeMoreProblems,
+		))
 		if err != nil {
 			return fmt.Errorf("event stream, publish chat closed event: %v", err)
 		}
