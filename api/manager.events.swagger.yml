@@ -14,12 +14,14 @@ components:
         - $ref: "#/components/schemas/NewChatEvent"
         - $ref: "#/components/schemas/NewMessageEvent"
         - $ref: "#/components/schemas/ChatClosedEvent"
+        - $ref: "#/components/schemas/TypingEvent"
       discriminator:
         propertyName: eventType
         mapping:
           NewChatEvent: "#/components/schemas/NewChatEvent"
           NewMessageEvent: "#/components/schemas/NewMessageEvent"
           ChatClosedEvent: "#/components/schemas/ChatClosedEvent"
+          TypingEvent: "#/components/schemas/TypingEvent"
 
     NewChatEvent:
       type: object
@@ -112,6 +114,58 @@ components:
           type: string
           format: uuid
           x-go-type: types.EventID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+        eventType:
+          type: string
+        requestId:
+          type: string
+          format: uuid
+          x-go-type: types.RequestID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+
+    TypingEvent:
+      type: object
+      required: [ clientId, eventId, eventType, requestId ]
+      properties:
+        clientId:
+          type: string
+          format: uuid
+          x-go-type: types.UserID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+        eventId:
+          type: string
+          format: uuid
+          x-go-type: types.EventID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+        eventType:
+          type: string
+        requestId:
+          type: string
+          format: uuid
+          x-go-type: types.RequestID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+
+    ReadEvent:
+      oneOf:
+        - $ref: "#/components/schemas/ManagerTypingEvent"
+      discriminator:
+        propertyName: eventType
+        mapping:
+          ManagerTypingEvent: "#/components/schemas/ManagerTypingEvent"
+
+    ManagerTypingEvent:
+      type: object
+      required: [ chatId, eventType, requestId ]
+      properties:
+        chatId:
+          type: string
+          format: uuid
+          x-go-type: types.ChatID
           x-go-type-import:
             path: "github.com/lapitskyss/chat-service/internal/types"
         eventType:

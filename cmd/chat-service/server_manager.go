@@ -27,7 +27,9 @@ import (
 	getchathistory "github.com/lapitskyss/chat-service/internal/usecases/manager/get-chat-history"
 	getchats "github.com/lapitskyss/chat-service/internal/usecases/manager/get-chats"
 	sendmessage "github.com/lapitskyss/chat-service/internal/usecases/manager/send-message"
+	managertypingmessage "github.com/lapitskyss/chat-service/internal/usecases/manager/typing-message"
 	websocketstream "github.com/lapitskyss/chat-service/internal/websocket-stream"
+	managerhandler "github.com/lapitskyss/chat-service/internal/websocket-stream/manager-handler"
 )
 
 const nameServerManager = "server-manager"
@@ -92,7 +94,7 @@ func initServerManager(
 	if err != nil {
 		return nil, fmt.Errorf("getchats usecase: %v", err)
 	}
-	sendMessage, err := sendmessage.New(sendmessage.NewOptions(
+	sendMessageUseCase, err := sendmessage.New(sendmessage.NewOptions(
 		msgRepo,
 		outboxSvc,
 		problemRepo,
@@ -101,6 +103,14 @@ func initServerManager(
 	if err != nil {
 		return nil, fmt.Errorf("sendmessage usecase: %v", err)
 	}
+	typingMessageUseCase, err := managertypingmessage.New(managertypingmessage.NewOptions(
+		chatRepo,
+		problemRepo,
+		eventStream,
+	))
+	if err != nil {
+		return nil, fmt.Errorf("managertypingmessage usecase: %v", err)
+	}
 
 	v1Handlers, err := managerv1.NewHandlers(managerv1.NewOptions(
 		canReceiveProblemUseCase,
@@ -108,7 +118,7 @@ func initServerManager(
 		freeHandsUseCase,
 		getChatHistoryUseCase,
 		getChatsUseCase,
-		sendMessage,
+		sendMessageUseCase,
 	))
 	if err != nil {
 		return nil, fmt.Errorf("create v1 manager handlers: %v", err)
@@ -119,6 +129,14 @@ func initServerManager(
 		close(shutdownCh)
 	}
 
+	wsReadHandler, err := managerhandler.New(managerhandler.NewOptions(
+		managerhandler.JSONEventReader{},
+		typingMessageUseCase,
+	))
+	if err != nil {
+		return nil, fmt.Errorf("create ws manager read handler: %v", err)
+	}
+
 	wsUpgrader := websocketstream.NewUpgrader(allowOrigins, secWsProtocol)
 	wsHandler, err := websocketstream.NewHTTPHandler(websocketstream.NewOptions(
 		lg,
@@ -126,6 +144,7 @@ func initServerManager(
 		managerevents.Adapter{},
 		websocketstream.JSONEventWriter{},
 		wsUpgrader,
+		wsReadHandler,
 		shutdownCh,
 	))
 	if err != nil {

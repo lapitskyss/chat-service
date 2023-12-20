@@ -14,6 +14,8 @@ class App {
     static msgInput = $('#msgInput');
     static sendButton = $('#sendBtn');
 
+    static sock;
+
     static Run() {
         const keycloak = new Keycloak({
             url: keycloakEndpoint,
@@ -43,7 +45,7 @@ class App {
 
                 this.apiClient = new APIClient(this.clientToken);
 
-                initWsStream(this.clientToken);
+                this.sock = initWsStream(this.clientToken);
                 App.GetLastMessages();
                 App.InitListeners();
             })
@@ -73,6 +75,7 @@ class App {
     static InitListeners() {
         App.GetHistoryOnScroll();
         App.SendMessageOnBtnClick();
+        App.TypingMessage();
     }
 
     static GetHistoryOnScroll() {
@@ -119,6 +122,28 @@ class App {
                 .catch((err) => {
                     alert('Send message error: ' + err);
                 });
+        });
+    }
+
+    static TypingMessage() {
+        const app = this;
+
+        let canPublish = true;
+        const throttleTime = 500; // 0.5 seconds
+
+        this.msgInput.on('keyup', function (event) {
+            if (canPublish) {
+                let request = {
+                    "eventType": "ClientTypingEvent",
+                    "requestId": uuidV4(),
+                }
+                app.sock.send(JSON.stringify(request))
+
+                canPublish = false;
+                setTimeout(function () {
+                    canPublish = true;
+                }, throttleTime);
+            }
         });
     }
 

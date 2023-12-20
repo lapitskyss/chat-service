@@ -56,6 +56,20 @@ func TestAdapter_Adapt(t *testing.T) {
 				"requestId": "cee5f290-bc30-11ed-b7fe-461e464ebed8"
 			}`,
 		},
+		{
+			name: "typing event",
+			ev: eventstream.NewTypingEvent(
+				types.MustParse[types.EventID]("8cfd1993-9a7b-45c4-9e9c-2a33086a860f"),
+				types.MustParse[types.UserID]("7d67b14d-221e-4499-9be2-6707d7df1adc"),
+				types.MustParse[types.RequestID]("d85154f7-867b-44f1-a930-f37151568132"),
+			),
+			expJSON: `{
+				"eventId": "8cfd1993-9a7b-45c4-9e9c-2a33086a860f",
+				"clientId": "7d67b14d-221e-4499-9be2-6707d7df1adc",
+				"eventType": "TypingEvent",
+				"requestId": "d85154f7-867b-44f1-a930-f37151568132"
+			}`,
+		},
 	}
 
 	for _, tt := range cases {

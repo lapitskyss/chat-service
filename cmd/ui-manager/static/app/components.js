@@ -10,7 +10,7 @@ class Chat {
 
     render() {
         return `
-<div class="row card problem" data-chat-id="${this.id}">
+<div class="row card problem" data-chat-id="${this.id}" data-client-id="${this.clientId}">
     Chat with ${this.clientId}
 </div>
 `;

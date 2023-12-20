@@ -159,3 +159,26 @@ func NewChatClosedEvent(
 func (e ChatClosedEvent) Validate() error {
 	return validator.Validator.Struct(e)
 }
+
+type TypingEvent struct {
+	event
+	EventID   types.EventID   `validate:"required"`
+	ClientID  types.UserID    `validate:"required"`
+	RequestID types.RequestID `validate:"required"`
+}
+
+func NewTypingEvent(
+	eventID types.EventID,
+	clientID types.UserID,
+	requestID types.RequestID,
+) *TypingEvent {
+	return &TypingEvent{
+		EventID:   eventID,
+		ClientID:  clientID,
+		RequestID: requestID,
+	}
+}
+
+func (e TypingEvent) Validate() error {
+	return validator.Validator.Struct(e)
+}

@@ -18,6 +18,7 @@ func NewOptions(
 	eventAdapter EventAdapter,
 	eventWriter EventWriter,
 	upgrader Upgrader,
+	readHandler msgReadHandler,
 	shutdownCh <-chan struct{},
 	options ...OptOptionsSetter,
 ) Options {
@@ -31,6 +32,7 @@ func NewOptions(
 	o.eventAdapter = eventAdapter
 	o.eventWriter = eventWriter
 	o.upgrader = upgrader
+	o.readHandler = readHandler
 	o.shutdownCh = shutdownCh
 
 	for _, opt := range options {
@@ -53,6 +55,7 @@ func (o *Options) Validate() error {
 	errs.Add(errors461e464ebed9.NewValidationError("eventAdapter", _validate_Options_eventAdapter(o)))
 	errs.Add(errors461e464ebed9.NewValidationError("eventWriter", _validate_Options_eventWriter(o)))
 	errs.Add(errors461e464ebed9.NewValidationError("upgrader", _validate_Options_upgrader(o)))
+	errs.Add(errors461e464ebed9.NewValidationError("readHandler", _validate_Options_readHandler(o)))
 	errs.Add(errors461e464ebed9.NewValidationError("shutdownCh", _validate_Options_shutdownCh(o)))
 	return errs.AsError()
 }
@@ -95,6 +98,13 @@ func _validate_Options_eventWriter(o *Options) error {
 func _validate_Options_upgrader(o *Options) error {
 	if err := validator461e464ebed9.GetValidatorFor(o).Var(o.upgrader, "required"); err != nil {
 		return fmt461e464ebed9.Errorf("field `upgrader` did not pass the test: %w", err)
+	}
+	return nil
+}
+
+func _validate_Options_readHandler(o *Options) error {
+	if err := validator461e464ebed9.GetValidatorFor(o).Var(o.readHandler, "required"); err != nil {
+		return fmt461e464ebed9.Errorf("field `readHandler` did not pass the test: %w", err)
 	}
 	return nil
 }

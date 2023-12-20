@@ -14,12 +14,14 @@ components:
         - $ref: "#/components/schemas/NewMessageEvent"
         - $ref: "#/components/schemas/MessageSentEvent"
         - $ref: "#/components/schemas/MessageBlockedEvent"
+        - $ref: "#/components/schemas/TypingEvent"
       discriminator:
         propertyName: eventType
         mapping:
           NewMessageEvent: "#/components/schemas/NewMessageEvent"
           MessageSentEvent: "#/components/schemas/MessageSentEvent"
           MessageBlockedEvent: "#/components/schemas/MessageBlockedEvent"
+          TypingEvent: "#/components/schemas/TypingEvent"
 
     EventCommon:
       type: object
@@ -73,3 +75,49 @@ components:
     MessageBlockedEvent:
       allOf:
         - $ref: "#/components/schemas/EventCommon"
+
+    TypingEvent:
+      type: object
+      required: [ clientId, eventId, eventType, requestId ]
+      properties:
+        clientId:
+          type: string
+          format: uuid
+          x-go-type: types.UserID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+        eventId:
+          type: string
+          format: uuid
+          x-go-type: types.EventID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+        eventType:
+          type: string
+        requestId:
+          type: string
+          format: uuid
+          x-go-type: types.RequestID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+
+    ReadEvent:
+      oneOf:
+        - $ref: "#/components/schemas/ClientTypingEvent"
+      discriminator:
+        propertyName: eventType
+        mapping:
+          ClientTypingEvent: "#/components/schemas/ClientTypingEvent"
+
+    ClientTypingEvent:
+      type: object
+      required: [ eventType, requestId ]
+      properties:
+        eventType:
+          type: string
+        requestId:
+          type: string
+          format: uuid
+          x-go-type: types.RequestID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"

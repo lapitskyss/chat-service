@@ -21,7 +21,9 @@ import (
 	"github.com/lapitskyss/chat-service/internal/store"
 	gethistory "github.com/lapitskyss/chat-service/internal/usecases/client/get-history"
 	sendmessage "github.com/lapitskyss/chat-service/internal/usecases/client/send-message"
+	clienttypingmessage "github.com/lapitskyss/chat-service/internal/usecases/client/typing-message"
 	websocketstream "github.com/lapitskyss/chat-service/internal/websocket-stream"
+	clienthandler "github.com/lapitskyss/chat-service/internal/websocket-stream/client-handler"
 )
 
 const nameServerClient = "server-client"
@@ -52,7 +54,6 @@ func initServerClient(
 	if err != nil {
 		return nil, fmt.Errorf("gethistory usecase: %v", err)
 	}
-
 	sendMessageUseCase, err := sendmessage.New(sendmessage.NewOptions(
 		chatRepo,
 		msgRepo,
@@ -63,6 +64,13 @@ func initServerClient(
 	if err != nil {
 		return nil, fmt.Errorf("gethistory usecase: %v", err)
 	}
+	typingMessageUseCase, err := clienttypingmessage.New(clienttypingmessage.NewOptions(
+		problemRepo,
+		eventStream,
+	))
+	if err != nil {
+		return nil, fmt.Errorf("clienttypingmessage usecase: %v", err)
+	}
 
 	v1Handlers, err := clientv1.NewHandlers(clientv1.NewOptions(
 		getHistoryUseCase,
@@ -70,6 +78,14 @@ func initServerClient(
 	))
 	if err != nil {
 		return nil, fmt.Errorf("create v1 handlers: %v", err)
+	}
+
+	wsReadHandler, err := clienthandler.New(clienthandler.NewOptions(
+		clienthandler.JSONEventReader{},
+		typingMessageUseCase,
+	))
+	if err != nil {
+		return nil, fmt.Errorf("create ws client read handler: %v", err)
 	}
 
 	shutdownCh := make(chan struct{})
@@ -84,6 +100,7 @@ func initServerClient(
 		clientevents.Adapter{},
 		websocketstream.JSONEventWriter{},
 		wsUpgrader,
+		wsReadHandler,
 		shutdownCh,
 	))
 	if err != nil {

@@ -1,3 +1,6 @@
+const clearTypingInterval = 900; //0.9 seconds
+let clearTypingTimerId;
+
 const eventHandlers = {
     'NewChatEvent': (event) => {
         if ($(`*[data-message-id="${event.chatId}"]`).length > 0) {
@@ -29,6 +32,7 @@ const eventHandlers = {
     'ChatClosedEvent': (event) => {
         if (App.currentChatID === event.chatId) {
             App.currentChatID = undefined;
+            App.currentClientID = undefined;
             App.chatArea.empty();
         }
         $(`*[data-chat-id="${event.chatId}"]`).remove();
@@ -38,6 +42,20 @@ const eventHandlers = {
                 App.readyToProblemsBtn.removeClass('disabled') :
                 App.readyToProblemsBtn.addClass('disabled');
         }
+    },
+
+
+    'TypingEvent': (event) => {
+        if (App.currentClientID !== event.clientId) {
+            return;
+        }
+        $('#user-is-typing').html(event.clientId + ' is typing...');
+
+        clearTimeout(clearTypingTimerId);
+        clearTypingTimerId = setTimeout(function () {
+            //clear user is typing message
+            $('#user-is-typing').html('');
+        }, clearTypingInterval);
     },
 };
 
@@ -87,4 +105,6 @@ function initWsStream(token) {
 
         eventHandlers[eventType](payload);
     };
+
+    return sock
 }

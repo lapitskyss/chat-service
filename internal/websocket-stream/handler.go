@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -24,6 +25,10 @@ type eventStream interface {
 	Subscribe(ctx context.Context, userID types.UserID) (<-chan eventstream.Event, error)
 }
 
+type msgReadHandler interface {
+	Handle(ctx context.Context, userID types.UserID, r io.Reader) error
+}
+
 //go:generate options-gen -out-filename=handler_options.gen.go -from-struct=Options
 type Options struct {
 	pingPeriod time.Duration `default:"3s" validate:"omitempty,min=100ms,max=30s"`
@@ -33,6 +38,7 @@ type Options struct {
 	eventAdapter EventAdapter    `option:"mandatory" validate:"required"`
 	eventWriter  EventWriter     `option:"mandatory" validate:"required"`
 	upgrader     Upgrader        `option:"mandatory" validate:"required"`
+	readHandler  msgReadHandler  `option:"mandatory" validate:"required"`
 	shutdownCh   <-chan struct{} `option:"mandatory" validate:"required"`
 }
 
@@ -68,7 +74,7 @@ func (h *HTTPHandler) Serve(c echo.Context) error {
 
 	errGrp, ctx := errgroup.WithContext(ctx)
 	errGrp.Go(func() error {
-		return h.readLoop(ctx, conn)
+		return h.readLoop(ctx, conn, userID)
 	})
 	errGrp.Go(func() error {
 		return h.writeLoop(ctx, conn, events)
@@ -92,7 +98,7 @@ func (h *HTTPHandler) Serve(c echo.Context) error {
 }
 
 // readLoop listen PONGs.
-func (h *HTTPHandler) readLoop(_ context.Context, ws Websocket) error {
+func (h *HTTPHandler) readLoop(ctx context.Context, ws Websocket, userID types.UserID) error {
 	pongDeadline := 2 * h.pingPeriod
 
 	_ = ws.SetReadDeadline(time.Now().Add(pongDeadline))
@@ -105,13 +111,19 @@ func (h *HTTPHandler) readLoop(_ context.Context, ws Websocket) error {
 	})
 
 	for {
-		_, _, err := ws.NextReader()
+		msgType, reader, err := ws.NextReader()
 		if err != nil {
 			if websocket.IsCloseError(err, websocket.CloseNormalClosure,
 				websocket.CloseGoingAway, websocket.CloseNoStatusReceived) {
 				return nil
 			}
 			return fmt.Errorf("read next message: %v", err)
+		}
+		if msgType == websocket.TextMessage {
+			err := h.readHandler.Handle(ctx, userID, reader)
+			if err != nil {
+				return fmt.Errorf("handle read event: %v", err)
+			}
 		}
 	}
 }
