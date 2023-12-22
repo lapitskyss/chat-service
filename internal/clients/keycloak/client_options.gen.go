@@ -69,7 +69,7 @@ func _validate_Options_clientID(o *Options) error {
 }
 
 func _validate_Options_clientSecret(o *Options) error {
-	if err := validator461e464ebed9.GetValidatorFor(o).Var(o.clientSecret, "required"); err != nil {
+	if err := validator461e464ebed9.GetValidatorFor(o).Var(o.clientSecret, "required,alphanum"); err != nil {
 		return fmt461e464ebed9.Errorf("field `clientSecret` did not pass the test: %w", err)
 	}
 	return nil

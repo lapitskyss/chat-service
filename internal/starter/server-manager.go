@@ -1,12 +1,13 @@
-package main
+package starter
 
 import (
 	"fmt"
 
-	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/google/wire"
 	"go.uber.org/zap"
 
 	keycloakclient "github.com/lapitskyss/chat-service/internal/clients/keycloak"
+	"github.com/lapitskyss/chat-service/internal/config"
 	chatsrepo "github.com/lapitskyss/chat-service/internal/repositories/chats"
 	messagesrepo "github.com/lapitskyss/chat-service/internal/repositories/messages"
 	problemsrepo "github.com/lapitskyss/chat-service/internal/repositories/problems"
@@ -32,19 +33,17 @@ import (
 	managerhandler "github.com/lapitskyss/chat-service/internal/websocket-stream/manager-handler"
 )
 
+type ServerManager *server.Server
+
+//nolint:unused
+var serverManagerSet = wire.NewSet(
+	provideServerManager,
+)
+
 const nameServerManager = "server-manager"
 
-func initServerManager(
-	productionMode bool,
-
-	addr string,
-	allowOrigins []string,
-	secWsProtocol string,
-	v1Swagger *openapi3.T,
-
-	keycloak *keycloakclient.Client,
-	requiredResource string,
-	requiredRole string,
+func provideServerManager(
+	cfg config.Config,
 
 	db *store.Database,
 	chatRepo *chatsrepo.Repo,
@@ -55,7 +54,10 @@ func initServerManager(
 	managerLoadSvc *managerload.Service,
 	managerPool managerpool.Pool,
 	outboxSvc *outbox.Service,
-) (*server.Server, error) {
+
+	keycloak *keycloakclient.Client,
+	v1Swagger ManagerV1Swagger,
+) (ServerManager, error) {
 	lg := zap.L().Named(nameServerManager)
 
 	canReceiveProblemUseCase, err := canreceiveproblems.New(canreceiveproblems.NewOptions(
@@ -137,7 +139,7 @@ func initServerManager(
 		return nil, fmt.Errorf("create ws manager read handler: %v", err)
 	}
 
-	wsUpgrader := websocketstream.NewUpgrader(allowOrigins, secWsProtocol)
+	wsUpgrader := websocketstream.NewUpgrader(cfg.Servers.Manager.AllowOrigins, cfg.Servers.Manager.SecWsProtocol)
 	wsHandler, err := websocketstream.NewHTTPHandler(websocketstream.NewOptions(
 		lg,
 		eventStream,
@@ -151,18 +153,18 @@ func initServerManager(
 		return nil, fmt.Errorf("websock etstream handler: %v", err)
 	}
 
-	httpErrHandler, err := errhandler.New(errhandler.NewOptions(lg, productionMode, managererrhandler.ResponseBuilder))
+	httpErrHandler, err := errhandler.New(errhandler.NewOptions(lg, cfg.Global.IsProd(), managererrhandler.ResponseBuilder))
 	if err != nil {
 		return nil, fmt.Errorf("create errhandler: %v", err)
 	}
 
 	srv, err := servermanager.New(servermanager.NewOptions(
 		lg,
-		addr,
-		allowOrigins,
+		cfg.Servers.Manager.Addr,
+		cfg.Servers.Manager.AllowOrigins,
 		keycloak,
-		requiredResource,
-		requiredRole,
+		cfg.Servers.Manager.RequiredAccess.Resource,
+		cfg.Servers.Manager.RequiredAccess.Role,
 		v1Swagger,
 		v1Handlers,
 		wsHandler,

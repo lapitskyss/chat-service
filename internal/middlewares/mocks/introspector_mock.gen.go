@@ -12,7 +12,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	keycloak "github.com/lapitskyss/chat-service/internal/clients/keycloak"
+	keycloakclient "github.com/lapitskyss/chat-service/internal/clients/keycloak"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -40,10 +40,10 @@ func (m *MockIntrospector) EXPECT() *MockIntrospectorMockRecorder {
 }
 
 // IntrospectToken mocks base method.
-func (m *MockIntrospector) IntrospectToken(ctx context.Context, token string) (*keycloak.IntrospectTokenResult, error) {
+func (m *MockIntrospector) IntrospectToken(ctx context.Context, token string) (*keycloakclient.IntrospectTokenResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IntrospectToken", ctx, token)
-	ret0, _ := ret[0].(*keycloak.IntrospectTokenResult)
+	ret0, _ := ret[0].(*keycloakclient.IntrospectTokenResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

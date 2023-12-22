@@ -20,6 +20,7 @@ vars:
     github.com/deepmap/oapi-codegen/cmd/oapi-codegen@v1.16.2
     go.uber.org/mock/mockgen@v0.3.0
     github.com/onsi/ginkgo/v2/ginkgo@v2.13.0
+    github.com/google/wire/cmd/wire@0.5.0
 
   TYPES: |
     ChatID
@@ -230,6 +231,11 @@ tasks:
       - "{{.DOCKER_COMPOSE_CMD}} exec keycloak /opt/keycloak/bin/kc.sh export --file /tmp/realm.json --realm Bank"
       - echo "Exported in ./deploy/local/bank-realm.json"
       - "{{.DOCKER_COMPOSE_CMD}} cp keycloak:/tmp/realm.json ./deploy/local/bank-realm.json"
+
+  gen:wire:
+    cmds:
+      - echo "Generate wire..."
+      - go generate ./cmd/chat-service/starter/wire.go
 
   gen:types:
     cmds:
