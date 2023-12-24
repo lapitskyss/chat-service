@@ -240,7 +240,11 @@ class App {
         let canPublish = true;
         const throttleTime = 500; // 0.5 seconds
 
-        this.msgInput.on('keyup', function (event) {
+        this.msgInput.on('keyup', function () {
+            if (!App.currentChatID) {
+                return;
+            }
+
             if (canPublish) {
                 const chatId = $(this).data('chat-id');
                 let request = {

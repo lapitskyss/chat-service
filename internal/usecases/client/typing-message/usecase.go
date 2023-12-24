@@ -46,6 +46,9 @@ func (u UseCase) Handle(ctx context.Context, req Request) error {
 
 	problem, err := u.problemRepo.GetClientOpenProblem(ctx, req.ClientID)
 	if err != nil {
+		if errors.Is(err, problemsrepo.ErrProblemNotFound) {
+			return nil
+		}
 		return fmt.Errorf("problem repo, get chat open problem, %v", err)
 	}
 
