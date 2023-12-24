@@ -159,6 +159,132 @@ func (s *MsgRepoHistoryAPISuite) Test_GetClientChatMessages() {
 	})
 }
 
+func (s *MsgRepoHistoryAPISuite) Test_GetProblemMessages() {
+	s.Run("too small page size", func() {
+		msgs, next, err := s.repo.GetProblemMessages(s.Ctx, types.NewProblemID(), 9, nil)
+		s.Require().ErrorIs(err, messagesrepo.ErrInvalidPageSize)
+		s.Nil(next)
+		s.Empty(msgs)
+	})
+
+	s.Run("too big page size", func() {
+		msgs, next, err := s.repo.GetProblemMessages(s.Ctx, types.NewProblemID(), 101, nil)
+		s.Require().ErrorIs(err, messagesrepo.ErrInvalidPageSize)
+		s.Nil(next)
+		s.Empty(msgs)
+	})
+
+	s.Run("no last created at in cursor", func() {
+		msgs, next, err := s.repo.GetProblemMessages(s.Ctx, types.NewProblemID(), 0, &messagesrepo.Cursor{
+			LastCreatedAt: time.Time{},
+			PageSize:      50,
+		})
+		s.Require().ErrorIs(err, messagesrepo.ErrInvalidCursor)
+		s.Nil(next)
+		s.Empty(msgs)
+	})
+
+	s.Run("too small page size in cursor", func() {
+		msgs, next, err := s.repo.GetProblemMessages(s.Ctx, types.NewProblemID(), 0, &messagesrepo.Cursor{
+			LastCreatedAt: time.Now(),
+			PageSize:      9,
+		})
+		s.Require().ErrorIs(err, messagesrepo.ErrInvalidCursor)
+		s.Nil(next)
+		s.Empty(msgs)
+	})
+
+	s.Run("too big page size in cursor", func() {
+		msgs, next, err := s.repo.GetProblemMessages(s.Ctx, types.NewProblemID(), 0, &messagesrepo.Cursor{
+			LastCreatedAt: time.Now(),
+			PageSize:      101,
+		})
+		s.Require().ErrorIs(err, messagesrepo.ErrInvalidCursor)
+		s.Nil(next)
+		s.Empty(msgs)
+	})
+
+	s.Run("manager has not got any messages", func() {
+		msgs, next, err := s.repo.GetProblemMessages(s.Ctx, types.NewProblemID(), 50, nil)
+		s.Require().NoError(err)
+		s.Nil(next)
+		s.Empty(msgs)
+	})
+
+	s.Run("cursor logic", func() {
+		const messagesCount = 30
+		client1 := types.NewUserID()
+
+		problem1, chat1 := s.createProblemAndChat(client1)
+		preparedMsgs := s.createMessages(messagesCount, chat1, problem1, client1, true, true, false)
+		s.Require().Len(preparedMsgs, messagesCount)
+
+		// Messages from other chat must be ignored.
+		client2 := types.NewUserID()
+		problem2, chat2 := s.createProblemAndChat(client2)
+		s.createMessages(3, chat2, problem2, client2, true, true, false)
+
+		// Invisible for manager messages must be ignored.
+		s.createMessages(4, chat1, problem1, client1, true, false, false)
+
+		for pageSize := 10; pageSize <= 20; pageSize++ {
+			s.Run(fmt.Sprintf("page size %d", pageSize), func() {
+				expected := batch[msg](pageSize, apply[*store.Message, msg](preparedMsgs, newMsgFromStoreMsg))
+				actual, actualCursors := s.getGetProblemMessagesWhileCursor(problem1, pageSize)
+				s.Run("pages", func() {
+					s.Equal(expected, actual)
+				})
+
+				expectedCursors := make([]cursor, 0, len(expected))
+				for i, b := range expected {
+					if len(b) == pageSize && (i != len(expected)-1) {
+						last := b[len(b)-1]
+						expectedCursors = append(expectedCursors, cursor{
+							PageSize:                 pageSize,
+							LastCreatedAtAsUnixMilli: last.CreatedAtAsUnixMilli,
+						})
+					}
+				}
+				s.Run("cursors", func() {
+					s.Equal(expectedCursors, actualCursors)
+				})
+			})
+		}
+	})
+
+	s.Run("adapt logic", func() {
+		client := types.NewUserID()
+		problem, chat := s.createProblemAndChat(client)
+
+		s.createMessages(1, chat, problem, types.UserIDNil, true, true, true)
+		lastMsg := s.createMessages(1, chat, problem, client, true, true, false)[0]
+
+		msgs, _, err := s.repo.GetProblemMessages(s.Ctx, problem, 11, nil)
+		s.Require().NoError(err)
+		s.Require().Len(msgs, 2)
+
+		msg := msgs[0]
+		s.Equal(lastMsg.ID, msg.ID)
+		s.Equal(chat, msg.ChatID)
+		s.Equal(client, msg.AuthorID)
+		s.Equal("message #0", msg.Body)
+		s.True(msg.CreatedAt.Equal(lastMsg.CreatedAt))
+		s.True(msg.IsVisibleForClient)
+		s.True(msg.IsVisibleForManager)
+		s.False(msg.IsBlocked)
+		s.False(msg.IsService)
+
+		s.Run("service message", func() {
+			svcMsg := msgs[1]
+			s.True(svcMsg.AuthorID.IsZero())
+			s.True(svcMsg.IsVisibleForClient)
+			s.True(svcMsg.IsVisibleForManager)
+			s.False(svcMsg.IsBlocked)
+			s.True(svcMsg.IsService)
+		})
+	})
+}
+
 func (s *MsgRepoHistoryAPISuite) createProblemAndChat(clientID types.UserID) (types.ProblemID, types.ChatID) {
 	s.T().Helper()
 
@@ -248,6 +374,34 @@ func (s *MsgRepoHistoryAPISuite) getClientChatMessagesWhileCursor(clientID types
 	)
 	for {
 		msgs, next, err = s.repo.GetClientChatMessages(s.Ctx, clientID, pageSize, next)
+		s.Require().NoError(err)
+		result = append(result, apply[messagesrepo.Message, msg](msgs, newMsgFromRepoMsg))
+
+		if next == nil {
+			break
+		}
+		cursors = append(cursors, cursor{
+			PageSize:                 next.PageSize,
+			LastCreatedAtAsUnixMilli: next.LastCreatedAt.UnixMilli(),
+		})
+	}
+
+	return result, cursors
+}
+
+func (s *MsgRepoHistoryAPISuite) getGetProblemMessagesWhileCursor(problemID types.ProblemID, pageSize int) ([][]msg, []cursor) {
+	s.T().Helper()
+
+	var result [][]msg
+	var cursors []cursor
+
+	var (
+		msgs []messagesrepo.Message
+		err  error
+		next *messagesrepo.Cursor
+	)
+	for {
+		msgs, next, err = s.repo.GetProblemMessages(s.Ctx, problemID, pageSize, next)
 		s.Require().NoError(err)
 		result = append(result, apply[messagesrepo.Message, msg](msgs, newMsgFromRepoMsg))
 

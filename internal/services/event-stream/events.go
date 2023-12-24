@@ -71,7 +71,7 @@ type NewMessageEvent struct {
 	RequestID   types.RequestID `validate:"required"`
 	ChatID      types.ChatID    `validate:"required"`
 	MessageID   types.MessageID `validate:"required"`
-	UserID      types.UserID    `validate:"required"`
+	UserID      types.UserID    `validate:"-"`
 	CreatedAt   time.Time       `validate:"-"`
 	MessageBody string          `validate:"required"`
 	IsService   bool            `validate:"-"`
@@ -100,5 +100,62 @@ func NewNewMessageEvent(
 }
 
 func (e NewMessageEvent) Validate() error {
+	return validator.Validator.Struct(e)
+}
+
+// NewChatEvent is a signal about the new chat is received for manager.
+type NewChatEvent struct {
+	event
+	EventID             types.EventID   `validate:"required"`
+	ChatID              types.ChatID    `validate:"required"`
+	ClientID            types.UserID    `validate:"required"`
+	RequestID           types.RequestID `validate:"required"`
+	CanTakeMoreProblems bool            `validate:"required"`
+}
+
+func NewNewChatEvent(
+	eventID types.EventID,
+	chatID types.ChatID,
+	clientID types.UserID,
+	requestID types.RequestID,
+	canTakeMoreProblems bool,
+) *NewChatEvent {
+	return &NewChatEvent{
+		EventID:             eventID,
+		ChatID:              chatID,
+		ClientID:            clientID,
+		RequestID:           requestID,
+		CanTakeMoreProblems: canTakeMoreProblems,
+	}
+}
+
+func (e NewChatEvent) Validate() error {
+	return validator.Validator.Struct(e)
+}
+
+// ChatClosedEvent is a signal about chat was closed by manager.
+type ChatClosedEvent struct {
+	event
+	EventID             types.EventID   `validate:"required"`
+	ChatID              types.ChatID    `validate:"required"`
+	RequestID           types.RequestID `validate:"required"`
+	CanTakeMoreProblems bool            `validate:"required"`
+}
+
+func NewChatClosedEvent(
+	eventID types.EventID,
+	chatID types.ChatID,
+	requestID types.RequestID,
+	canTakeMoreProblems bool,
+) *ChatClosedEvent {
+	return &ChatClosedEvent{
+		EventID:             eventID,
+		ChatID:              chatID,
+		RequestID:           requestID,
+		CanTakeMoreProblems: canTakeMoreProblems,
+	}
+}
+
+func (e ChatClosedEvent) Validate() error {
 	return validator.Validator.Struct(e)
 }

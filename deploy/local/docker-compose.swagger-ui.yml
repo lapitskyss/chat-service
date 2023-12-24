@@ -13,4 +13,5 @@ services:
         {url: 'api/client.v1.swagger.yml', name: 'Bank Support Chat Client API'},
         {url: 'api/manager.v1.swagger.yml', name: 'Bank Support Chat Manager API'},
         {url: 'api/client.events.swagger.yml', name: 'Bank Support Chat Client Events'},
+        {url: 'api/manager.events.swagger.yml', name: 'Bank Support Chat Manager Events'},
       ]"

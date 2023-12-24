@@ -27,7 +27,7 @@ func NewOptions(
 	v1Handlers clientv1.ServerInterface,
 	wsHandler *websocketstream.HTTPHandler,
 	httpErrorHandler echo.HTTPErrorHandler,
-	cancelFn func(),
+	shutdown func(),
 	options ...OptOptionsSetter,
 ) Options {
 	o := Options{}
@@ -44,7 +44,7 @@ func NewOptions(
 	o.v1Handlers = v1Handlers
 	o.wsHandler = wsHandler
 	o.httpErrorHandler = httpErrorHandler
-	o.cancelFn = cancelFn
+	o.shutdown = shutdown
 
 	for _, opt := range options {
 		opt(&o)
@@ -64,7 +64,7 @@ func (o *Options) Validate() error {
 	errs.Add(errors461e464ebed9.NewValidationError("v1Handlers", _validate_Options_v1Handlers(o)))
 	errs.Add(errors461e464ebed9.NewValidationError("wsHandler", _validate_Options_wsHandler(o)))
 	errs.Add(errors461e464ebed9.NewValidationError("httpErrorHandler", _validate_Options_httpErrorHandler(o)))
-	errs.Add(errors461e464ebed9.NewValidationError("cancelFn", _validate_Options_cancelFn(o)))
+	errs.Add(errors461e464ebed9.NewValidationError("shutdown", _validate_Options_shutdown(o)))
 	return errs.AsError()
 }
 
@@ -138,9 +138,9 @@ func _validate_Options_httpErrorHandler(o *Options) error {
 	return nil
 }
 
-func _validate_Options_cancelFn(o *Options) error {
-	if err := validator461e464ebed9.GetValidatorFor(o).Var(o.cancelFn, "-"); err != nil {
-		return fmt461e464ebed9.Errorf("field `cancelFn` did not pass the test: %w", err)
+func _validate_Options_shutdown(o *Options) error {
+	if err := validator461e464ebed9.GetValidatorFor(o).Var(o.shutdown, "-"); err != nil {
+		return fmt461e464ebed9.Errorf("field `shutdown` did not pass the test: %w", err)
 	}
 	return nil
 }

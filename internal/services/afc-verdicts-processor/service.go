@@ -7,14 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strconv"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/golang-jwt/jwt"
 	"github.com/segmentio/kafka-go"
-	"github.com/segmentio/kafka-go/protocol"
-	"go.uber.org/zap"
+	"go.uber.org/multierr"
 	"golang.org/x/sync/errgroup"
 
 	clientmessageblockedjob "github.com/lapitskyss/chat-service/internal/services/outbox/jobs/client-message-blocked"
@@ -47,7 +45,7 @@ type Options struct {
 	consumerGroup    string   `option:"mandatory" validate:"required"`
 	verdictsTopic    string   `option:"mandatory" validate:"required"`
 	verdictsSignKey  string
-	processBatchSize int
+	processBatchSize int `default:"1" validate:"min=1"`
 
 	readerFactory KafkaReaderFactory `option:"mandatory" validate:"required"`
 	dlqWriter     KafkaDLQWriter     `option:"mandatory" validate:"required"`
@@ -60,8 +58,8 @@ type Options struct {
 type Service struct {
 	Options
 
-	key     *rsa.PublicKey
-	backoff backoff.BackOff
+	key *rsa.PublicKey
+	dlq chan erroredMessage
 }
 
 func New(opts Options) (*Service, error) {
@@ -78,43 +76,43 @@ func New(opts Options) (*Service, error) {
 		}
 	}
 
-	retry := backoff.NewExponentialBackOff()
-	retry.InitialInterval = 100 * time.Millisecond
-	retry.RandomizationFactor = 0
-	retry.MaxElapsedTime = 3 * time.Second
+	dlq := make(chan erroredMessage)
 
 	return &Service{
 		Options: opts,
 		key:     key,
-		backoff: retry,
+		dlq:     dlq,
 	}, nil
 }
 
 func (s *Service) Run(ctx context.Context) error {
-	defer s.dlqWriter.Close()
+	eg, ctx := errgroup.WithContext(ctx)
 
-	errGrp, ctx := errgroup.WithContext(ctx)
+	eg.Go(func() error {
+		return s.startDLQProducer(ctx)
+	})
 
 	for i := 0; i < s.consumers; i++ {
-		errGrp.Go(func() error {
+		eg.Go(func() error {
 			return s.runConsumer(ctx)
 		})
 	}
 
-	err := errGrp.Wait()
+	err := eg.Wait()
 	if err != nil {
 		return fmt.Errorf("run consumer: %v", err)
 	}
 	return nil
 }
 
-func (s *Service) runConsumer(ctx context.Context) error {
-	reader := s.readerFactory(s.brokers, s.consumerGroup, s.verdictsTopic)
+func (s *Service) runConsumer(ctx context.Context) (errReturned error) {
+	consumer := s.readerFactory(s.brokers, s.consumerGroup, s.verdictsTopic)
+	defer multierr.AppendInvoke(&errReturned, multierr.Close(consumer))
 
-	defer reader.Close()
+	var messagesProcessed int
 
 	for {
-		msg, err := reader.FetchMessage(ctx)
+		msg, err := consumer.FetchMessage(ctx)
 		if err != nil {
 			if errors.Is(err, context.Canceled) || errors.Is(err, io.EOF) {
 				return nil
@@ -122,56 +120,62 @@ func (s *Service) runConsumer(ctx context.Context) error {
 			return fmt.Errorf("fetch message: %v", err)
 		}
 
-		s.handleMessage(ctx, msg)
-
-		err = reader.CommitMessages(ctx, msg)
+		err = s.handleMessage(ctx, msg)
 		if err != nil {
-			return fmt.Errorf("commit messages: %v", err)
+			go func(err error) {
+				select {
+				case <-ctx.Done():
+				case s.dlq <- erroredMessage{msg: msg, lastErr: err}:
+				}
+			}(err)
+		}
+
+		messagesProcessed++
+		if messagesProcessed == s.processBatchSize {
+			err = consumer.CommitMessages(ctx, msg)
+			if err != nil {
+				return err
+			}
+			messagesProcessed = 0
 		}
 	}
 }
 
-func (s *Service) handleMessage(ctx context.Context, msg kafka.Message) {
+func (s *Service) handleMessage(ctx context.Context, msg kafka.Message) error {
 	verdict, err := s.parseVerdict(ctx, msg.Value)
 	if err != nil {
-		s.writeToDLQ(ctx, msg, err.Error())
-		return
+		return err
 	}
 
 	if verdict.Status != VerdictStatusOK {
-		err = s.processBlockMessage(ctx, verdict)
-		if err != nil {
-			s.writeToDLQ(ctx, msg, err.Error())
-			return
-		}
-		return
+		return s.processBlockMessage(ctx, verdict)
 	}
 
-	err = s.processMarkAsVisibleForManager(ctx, verdict)
-	if err != nil {
-		s.writeToDLQ(ctx, msg, err.Error())
-		return
-	}
+	return s.processMarkAsVisibleForManager(ctx, verdict)
 }
 
 func (s *Service) processBlockMessage(ctx context.Context, verdict *Verdict) error {
+	b := backoff.WithContext(s.newProcessMessageBackOff(), ctx)
+
 	return backoff.Retry(func() error {
 		err := s.blockMessage(ctx, verdict)
 		if err != nil {
 			return err
 		}
 		return nil
-	}, backoff.WithContext(s.backoff, ctx))
+	}, b)
 }
 
 func (s *Service) processMarkAsVisibleForManager(ctx context.Context, verdict *Verdict) error {
+	b := backoff.WithContext(s.newProcessMessageBackOff(), ctx)
+
 	return backoff.Retry(func() error {
 		err := s.markAsVisibleForManager(ctx, verdict)
 		if err != nil {
 			return err
 		}
 		return nil
-	}, backoff.WithContext(s.backoff, ctx))
+	}, b)
 }
 
 func (s *Service) blockMessage(ctx context.Context, verdict *Verdict) error {
@@ -251,26 +255,9 @@ func (s *Service) parseVerdict(_ context.Context, data []byte) (*Verdict, error)
 	return &verdict, nil
 }
 
-func (s *Service) writeToDLQ(ctx context.Context, msg kafka.Message, errMsg string) {
-	lastError := protocol.Header{
-		Key:   "LAST_ERROR",
-		Value: []byte(errMsg),
-	}
-
-	originalPartition := protocol.Header{
-		Key:   "ORIGINAL_PARTITION",
-		Value: []byte(strconv.Itoa(msg.Partition)),
-	}
-
-	msg.Headers = append(msg.Headers, lastError, originalPartition)
-	msg.Topic = ""
-
-	err := s.dlqWriter.WriteMessages(ctx, msg)
-	if err != nil {
-		logError("write message to dlq", err)
-	}
-}
-
-func logError(msg string, err error) {
-	zap.L().Named(serviceName).Error(msg, zap.Error(err))
+func (s *Service) newProcessMessageBackOff() *backoff.ExponentialBackOff {
+	b := backoff.NewExponentialBackOff()
+	b.InitialInterval = s.backoffInitialInterval
+	b.MaxElapsedTime = s.backoffMaxElapsedTime
+	return b
 }

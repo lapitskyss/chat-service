@@ -53,16 +53,18 @@ func (h *HTTPHandler) Serve(c echo.Context) error {
 		return fmt.Errorf("upgrate connection: %v", err)
 	}
 
+	closer := newWsCloser(h.logger, conn)
+	defer closer.Close(websocket.CloseNormalClosure)
+
 	ctx := c.Request().Context()
 	userID := middlewares.MustUserID(c)
 
 	events, err := h.eventStream.Subscribe(ctx, userID)
 	if err != nil {
-		return fmt.Errorf("subscribe to events: %v", err)
+		h.logger.Error("cannot subscribe for events", zap.Error(err))
+		closer.Close(websocket.CloseInternalServerErr)
+		return nil
 	}
-
-	closer := newWsCloser(h.logger, conn)
-	defer closer.Close(websocket.CloseNormalClosure)
 
 	errGrp, ctx := errgroup.WithContext(ctx)
 	errGrp.Go(func() error {
@@ -74,15 +76,16 @@ func (h *HTTPHandler) Serve(c echo.Context) error {
 	errGrp.Go(func() error {
 		select {
 		case <-ctx.Done():
-			return nil
 		case <-h.shutdownCh:
 			closer.Close(websocket.CloseNormalClosure)
-			return nil
 		}
+		return nil
 	})
 	err = errGrp.Wait()
 	if err != nil {
-		return fmt.Errorf("serve ws: %v", err)
+		h.logger.Error("unexpected error", zap.Error(err))
+		closer.Close(websocket.CloseInternalServerErr)
+		return nil
 	}
 
 	return nil
@@ -104,7 +107,8 @@ func (h *HTTPHandler) readLoop(_ context.Context, ws Websocket) error {
 	for {
 		_, _, err := ws.NextReader()
 		if err != nil {
-			if websocket.IsCloseError(err, websocket.CloseGoingAway, websocket.CloseNoStatusReceived) {
+			if websocket.IsCloseError(err, websocket.CloseNormalClosure,
+				websocket.CloseGoingAway, websocket.CloseNoStatusReceived) {
 				return nil
 			}
 			return fmt.Errorf("read next message: %v", err)
@@ -126,7 +130,10 @@ func (h *HTTPHandler) writeLoop(ctx context.Context, ws Websocket, events <-chan
 			if err != nil {
 				return fmt.Errorf("write ping: %v", err)
 			}
-		case event := <-events:
+		case event, ok := <-events:
+			if !ok {
+				return errors.New("events stream was closed")
+			}
 			err := h.writeEvent(ws, event)
 			if err != nil {
 				return fmt.Errorf("write event: %v", err)

@@ -9,7 +9,11 @@ import (
 
 	svcerr "github.com/lapitskyss/chat-service/internal/errors"
 	canreceiveproblems "github.com/lapitskyss/chat-service/internal/usecases/manager/can-receive-problems"
+	closechat "github.com/lapitskyss/chat-service/internal/usecases/manager/close-chat"
 	freehands "github.com/lapitskyss/chat-service/internal/usecases/manager/free-hands"
+	getchathistory "github.com/lapitskyss/chat-service/internal/usecases/manager/get-chat-history"
+	getchats "github.com/lapitskyss/chat-service/internal/usecases/manager/get-chats"
+	sendmessage "github.com/lapitskyss/chat-service/internal/usecases/manager/send-message"
 )
 
 var _ ServerInterface = (*Handlers)(nil)
@@ -20,14 +24,34 @@ type canReceiveProblemsUseCase interface {
 	Handle(ctx context.Context, req canreceiveproblems.Request) (canreceiveproblems.Response, error)
 }
 
+type closeChatUseCase interface {
+	Handle(ctx context.Context, req closechat.Request) error
+}
+
 type freeHandsUseCase interface {
 	Handle(ctx context.Context, req freehands.Request) error
+}
+
+type getChatHistoryUseCase interface {
+	Handle(ctx context.Context, req getchathistory.Request) (getchathistory.Response, error)
+}
+
+type getChatsUseCase interface {
+	Handle(ctx context.Context, req getchats.Request) (getchats.Response, error)
+}
+
+type sendMessageUseCase interface {
+	Handle(ctx context.Context, req sendmessage.Request) (sendmessage.Response, error)
 }
 
 //go:generate options-gen -out-filename=handlers.gen.go -from-struct=Options
 type Options struct {
 	canReceiveProblems canReceiveProblemsUseCase `option:"mandatory" validate:"required"`
+	closeChat          closeChatUseCase          `option:"mandatory" validate:"required"`
 	freeHands          freeHandsUseCase          `option:"mandatory" validate:"required"`
+	getChatHistory     getChatHistoryUseCase     `option:"mandatory" validate:"required"`
+	getChats           getChatsUseCase           `option:"mandatory" validate:"required"`
+	sendMessage        sendMessageUseCase        `option:"mandatory" validate:"required"`
 }
 
 type Handlers struct {

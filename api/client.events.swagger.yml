@@ -7,18 +7,6 @@ servers:
   - url: ws://localhost:8080/ws
     description: Development server
 
-paths:
-  /stub:
-    get:
-      description: It uses for generating events. Otherwise it doesn't.
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Event'
-
 components:
   schemas:
     Event:

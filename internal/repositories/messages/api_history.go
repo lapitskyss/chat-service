@@ -31,7 +31,7 @@ func (r *Repo) GetClientChatMessages(
 	pageSize int,
 	cursor *Cursor,
 ) ([]Message, *Cursor, error) {
-	pageSize, createdFrom, err := validateGetClientChatMessages(pageSize, cursor)
+	pageSize, createdFrom, err := validateGetChatMessages(pageSize, cursor)
 	if err != nil {
 		return nil, nil, fmt.Errorf("validate request: %w", err)
 	}
@@ -54,17 +54,59 @@ func (r *Repo) GetClientChatMessages(
 	}
 
 	if len(msgs) <= pageSize {
-		return adaptStoreMessages(msgs), nil, nil
+		return adaptMessages(msgs), nil, nil
 	}
 
 	c := &Cursor{
 		LastCreatedAt: msgs[len(msgs)-2].CreatedAt,
 		PageSize:      pageSize,
 	}
-	return adaptStoreMessages(msgs[:len(msgs)-1]), c, nil
+	return adaptMessages(msgs[:len(msgs)-1]), c, nil
 }
 
-func validateGetClientChatMessages(pageSize int, cursor *Cursor) (int, time.Time, error) {
+// GetProblemMessages returns Nth page of messages in the chat for manager side (specific problem).
+func (r *Repo) GetProblemMessages(
+	ctx context.Context,
+	problemID types.ProblemID,
+	pageSize int,
+	cursor *Cursor,
+) ([]Message, *Cursor, error) {
+	pageSize, createdFrom, err := validateGetChatMessages(pageSize, cursor)
+	if err != nil {
+		return nil, nil, fmt.Errorf("validate request: %w", err)
+	}
+
+	query := r.db.Message(ctx).
+		Query().
+		Unique(false).
+		Where(
+			message.ProblemID(problemID),
+			message.IsVisibleForManager(true),
+		).
+		Order(message.ByCreatedAt(sql.OrderDesc())).
+		Limit(pageSize + 1)
+
+	if !createdFrom.IsZero() {
+		query = query.Where(message.CreatedAtLT(createdFrom))
+	}
+
+	msgs, err := query.All(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("get client chat messags: %v", err)
+	}
+
+	if len(msgs) <= pageSize {
+		return adaptMessages(msgs), nil, nil
+	}
+
+	c := &Cursor{
+		LastCreatedAt: msgs[len(msgs)-2].CreatedAt,
+		PageSize:      pageSize,
+	}
+	return adaptMessages(msgs[:len(msgs)-1]), c, nil
+}
+
+func validateGetChatMessages(pageSize int, cursor *Cursor) (int, time.Time, error) {
 	if cursor != nil {
 		if !isPageSizeValid(cursor.PageSize) {
 			return 0, time.Time{}, ErrInvalidCursor

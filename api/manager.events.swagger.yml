@@ -1,0 +1,124 @@
+openapi: 3.1.0
+info:
+  title: Bank Support Chat Manager Events
+  version: v1
+
+servers:
+  - url: ws://localhost:8080/ws
+    description: Development server
+
+components:
+  schemas:
+    Event:
+      oneOf:
+        - $ref: "#/components/schemas/NewChatEvent"
+        - $ref: "#/components/schemas/NewMessageEvent"
+        - $ref: "#/components/schemas/ChatClosedEvent"
+      discriminator:
+        propertyName: eventType
+        mapping:
+          NewChatEvent: "#/components/schemas/NewChatEvent"
+          NewMessageEvent: "#/components/schemas/NewMessageEvent"
+          ChatClosedEvent: "#/components/schemas/ChatClosedEvent"
+
+    NewChatEvent:
+      type: object
+      required: [ canTakeMoreProblems, chatId, clientId, eventId, eventType, requestId ]
+      properties:
+        canTakeMoreProblems:
+          type: boolean
+        chatId:
+          type: string
+          format: uuid
+          x-go-type: types.ChatID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+        clientId:
+          type: string
+          format: uuid
+          x-go-type: types.UserID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+        eventId:
+          type: string
+          format: uuid
+          x-go-type: types.EventID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+        eventType:
+          type: string
+        requestId:
+          type: string
+          format: uuid
+          x-go-type: types.RequestID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+
+    NewMessageEvent:
+      type: object
+      required: [ authorId, body, chatId, createdAt, eventId, eventType, messageId, requestId ]
+      properties:
+        authorId:
+          type: string
+          format: uuid
+          x-go-type: types.UserID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+        body:
+          type: string
+        chatId:
+          type: string
+          format: uuid
+          x-go-type: types.ChatID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+        createdAt:
+          type: string
+          format: date-time
+        eventId:
+          type: string
+          format: uuid
+          x-go-type: types.EventID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+        eventType:
+          type: string
+        messageId:
+          type: string
+          format: uuid
+          x-go-type: types.MessageID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+        requestId:
+          type: string
+          format: uuid
+          x-go-type: types.RequestID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+
+    ChatClosedEvent:
+      type: object
+      required: [ canTakeMoreProblems, chatId, eventId, eventType, requestId ]
+      properties:
+        canTakeMoreProblems:
+          type: boolean
+        chatId:
+          type: string
+          format: uuid
+          x-go-type: types.ChatID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+        eventId:
+          type: string
+          format: uuid
+          x-go-type: types.EventID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+        eventType:
+          type: string
+        requestId:
+          type: string
+          format: uuid
+          x-go-type: types.RequestID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"

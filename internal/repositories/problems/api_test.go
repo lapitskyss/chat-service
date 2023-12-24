@@ -138,6 +138,71 @@ func (s *ProblemsRepoSuite) Test_GetManagerOpenProblemsCount() {
 	})
 }
 
+func (s *ProblemsRepoSuite) Test_GetAssignedProblemID() {
+	s.Run("manager has problem for chat", func() {
+		clientID := types.NewUserID()
+		managerID := types.NewUserID()
+
+		// Create chat.
+		chat, err := s.Database.Chat(s.Ctx).Create().SetClientID(clientID).Save(s.Ctx)
+		s.Require().NoError(err)
+
+		// Create problem.
+		problem, err := s.Database.Problem(s.Ctx).Create().SetChatID(chat.ID).SetManagerID(managerID).Save(s.Ctx)
+		s.Require().NoError(err)
+
+		problemID, err := s.repo.GetAssignedProblemID(s.Ctx, managerID, chat.ID)
+		s.Require().NoError(err)
+		s.NotEmpty(problemID)
+		s.Equal(problem.ID, problemID)
+	})
+
+	s.Run("manager has problem is resolved", func() {
+		clientID := types.NewUserID()
+		managerID := types.NewUserID()
+
+		// Create chat.
+		chat, err := s.Database.Chat(s.Ctx).Create().SetClientID(clientID).Save(s.Ctx)
+		s.Require().NoError(err)
+
+		// Create problem.
+		_, err = s.Database.
+			Problem(s.Ctx).
+			Create().
+			SetChatID(chat.ID).
+			SetManagerID(managerID).
+			SetResolvedAt(time.Now()).
+			Save(s.Ctx)
+		s.Require().NoError(err)
+
+		problemID, err := s.repo.GetAssignedProblemID(s.Ctx, managerID, chat.ID)
+		s.Require().Error(err)
+		s.Empty(problemID)
+	})
+}
+
+func (s *ProblemsRepoSuite) Test_ResolveProblem() {
+	// Arrange.
+	s.Run("resolve problem", func() {
+		// Arrange.
+		clientID := types.NewUserID()
+		managerID := types.NewUserID()
+
+		chat, err := s.Database.Chat(s.Ctx).Create().SetClientID(clientID).Save(s.Ctx)
+		s.Require().NoError(err)
+		problem, err := s.Database.Problem(s.Ctx).Create().SetChatID(chat.ID).SetManagerID(managerID).Save(s.Ctx)
+		s.Require().NoError(err)
+
+		// Action.
+		err = s.repo.ResolveProblem(s.Ctx, problem.ID)
+		s.Require().NoError(err)
+
+		// Assert.
+		p := s.Database.Problem(s.Ctx).GetX(s.Ctx, problem.ID)
+		s.NotEmpty(p.ResolvedAt)
+	})
+}
+
 func (s *ProblemsRepoSuite) createChatWithProblemAssignedTo(managerID types.UserID) types.ProblemID {
 	s.T().Helper()
 

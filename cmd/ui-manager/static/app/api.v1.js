@@ -3,7 +3,7 @@ const getChatHistoryPath = '/getChatHistory';
 const getFreeHandsBtnAvPath = '/getFreeHandsBtnAvailability';
 const freeHandsPath = '/freeHands';
 const sendMessagePath = '/sendMessage';
-const resolveProblemPath = '/resolveProblem';
+const closeChatPath = '/closeChat';
 
 const defaultHistoryPageSize = 10;
 
@@ -83,8 +83,8 @@ class APIClient {
         return await this.extractData(response);
     }
 
-    async problemResolved(chatId) {
-        const response = await fetch(apiEndpoint + resolveProblemPath, {
+    async closeChat(chatId) {
+        const response = await fetch(apiEndpoint + closeChatPath, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json;charset=utf-8',

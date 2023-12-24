@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	clientchat "github.com/lapitskyss/chat-service/tests/e2e/client-chat"
+	managerworkspace "github.com/lapitskyss/chat-service/tests/e2e/manager-workspace"
 	wsstream "github.com/lapitskyss/chat-service/tests/e2e/ws-stream"
 )
 
@@ -20,6 +21,10 @@ var _ = Describe("Client Events Smoke", Ordered, func() {
 		clientChat        *clientchat.Chat
 		clientStream      *wsstream.Stream
 		clientStreamErrCh = make(chan error, 1)
+
+		managerWs          *managerworkspace.Workspace
+		managerStream      *wsstream.Stream
+		managerStreamErrCh = make(chan error, 1)
 	)
 
 	BeforeAll(func() {
@@ -38,11 +43,25 @@ var _ = Describe("Client Events Smoke", Ordered, func() {
 		))
 		Expect(err).ShouldNot(HaveOccurred())
 		go func() { clientStreamErrCh <- clientStream.Run(ctx) }()
+
+		// Setup manager.
+		managerWs = newManagerWs(ctx, managersPool.Get())
+
+		managerStream, err = wsstream.New(wsstream.NewOptions(
+			wsManagerEndpoint,
+			wsManagerOrigin,
+			wsManagerSecProtocol,
+			managerWs.AccessToken(),
+			managerWs.HandleEvent,
+		))
+		Expect(err).ShouldNot(HaveOccurred())
+		go func() { managerStreamErrCh <- managerStream.Run(ctx) }()
 	})
 
 	AfterAll(func() {
 		cancel()
 		Expect(<-clientStreamErrCh).ShouldNot(HaveOccurred())
+		Expect(<-managerStreamErrCh).ShouldNot(HaveOccurred())
 	})
 
 	It("client message was sent to manager", func() {
@@ -69,5 +88,15 @@ var _ = Describe("Client Events Smoke", Ordered, func() {
 		Expect(ok).Should(BeTrue())
 		Expect(msg.IsReceived).Should(BeFalse())
 		Expect(msg.IsBlocked).Should(BeTrue())
+	})
+
+	It("some garbage collection: assign chat to manager", func() {
+		err := managerWs.Refresh(ctx)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		err = managerWs.ReadyToNewProblems(ctx)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		waitForEvent(managerStream) // NewChatEvent.
 	})
 })

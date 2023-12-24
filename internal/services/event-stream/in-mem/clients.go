@@ -7,11 +7,11 @@ import (
 	"github.com/lapitskyss/chat-service/internal/types"
 )
 
-type Clients struct {
-	items map[types.UserID][]*Client
+type clients struct {
+	items map[types.UserID][]*client
 }
 
-type Client struct {
+type client struct {
 	ctx context.Context
 	ch  chan eventstream.Event
 
@@ -19,8 +19,8 @@ type Client struct {
 	userID types.UserID
 }
 
-func (c *Clients) Add(ctx context.Context, userID types.UserID) *Client {
-	client := &Client{
+func (c *clients) Add(ctx context.Context, userID types.UserID) *client {
+	cl := &client{
 		ctx: ctx,
 		ch:  make(chan eventstream.Event, 1024),
 
@@ -28,24 +28,24 @@ func (c *Clients) Add(ctx context.Context, userID types.UserID) *Client {
 		userID: userID,
 	}
 
-	c.items[userID] = append(c.items[userID], client)
+	c.items[userID] = append(c.items[userID], cl)
 
-	return client
+	return cl
 }
 
-func (c *Clients) Get(userID types.UserID) []*Client {
+func (c *clients) Get(userID types.UserID) []*client {
 	return c.items[userID]
 }
 
-func (c *Clients) Remove(client *Client) {
-	clients, exist := c.items[client.userID]
+func (c *clients) Remove(client *client) {
+	cls, exist := c.items[client.userID]
 	if !exist {
 		return
 	}
 
-	for i := 0; i < len(clients); i++ {
-		if clients[i].id == client.id {
-			c.items[client.userID] = remove(clients, i)
+	for i := 0; i < len(cls); i++ {
+		if cls[i].id == client.id {
+			c.items[client.userID] = remove(cls, i)
 			close(client.ch)
 		}
 	}
@@ -55,13 +55,13 @@ func (c *Clients) Remove(client *Client) {
 	}
 }
 
-func remove(s []*Client, i int) []*Client {
+func remove(s []*client, i int) []*client {
 	s[i] = s[len(s)-1]
 	return s[:len(s)-1]
 }
 
-func NewClients() *Clients {
-	return &Clients{
-		items: make(map[types.UserID][]*Client),
+func newClients() *clients {
+	return &clients{
+		items: make(map[types.UserID][]*client),
 	}
 }

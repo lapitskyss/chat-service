@@ -79,6 +79,52 @@ func (s *MsgRepoAPISuite) Test_GetMessageByID() {
 	})
 }
 
+func (s *MsgRepoAPISuite) Test_GetMessageByIDWithManager() {
+	s.Run("message exists", func() {
+		authorID := types.NewUserID()
+		managerID := types.NewUserID()
+
+		// Create chat and problem.
+		problemID, chatID := s.createProblemWithManagerAndChat(authorID, managerID)
+
+		msgID := types.NewMessageID()
+
+		// Create message.
+		expectedMsg, err := s.Database.Message(s.Ctx).Create().
+			SetID(msgID).
+			SetChatID(chatID).
+			SetAuthorID(authorID).
+			SetProblemID(problemID).
+			SetBody(msgBody).
+			SetIsBlocked(true).
+			SetIsService(true).
+			SetInitialRequestID(types.NewRequestID()).
+			Save(s.Ctx)
+		s.Require().NoError(err)
+
+		// Get it.
+		actualMsg, err := s.repo.GetMessageByIDWithManager(s.Ctx, msgID)
+		s.Require().NoError(err)
+		s.Require().NotNil(actualMsg)
+		s.Equal(expectedMsg.ID, actualMsg.ID)
+		s.Equal(expectedMsg.ChatID, actualMsg.ChatID)
+		s.Equal(expectedMsg.AuthorID, actualMsg.AuthorID)
+		s.Equal(managerID, actualMsg.ManagerID)
+		s.Equal(expectedMsg.Body, actualMsg.Body)
+		s.Equal(expectedMsg.CreatedAt.Unix(), actualMsg.CreatedAt.Unix())
+		s.Equal(expectedMsg.IsVisibleForClient, actualMsg.IsVisibleForClient)
+		s.Equal(expectedMsg.IsVisibleForManager, actualMsg.IsVisibleForManager)
+		s.Equal(expectedMsg.IsBlocked, actualMsg.IsBlocked)
+		s.Equal(expectedMsg.IsService, actualMsg.IsService)
+	})
+
+	s.Run("message does not exist", func() {
+		msg, err := s.repo.GetMessageByID(s.Ctx, types.NewMessageID())
+		s.Require().Error(err)
+		s.Require().Nil(msg)
+	})
+}
+
 func (s *MsgRepoAPISuite) Test_GetMessageByRequestID() {
 	s.Run("message exists", func() {
 		authorID := types.NewUserID()
@@ -124,6 +170,51 @@ func (s *MsgRepoAPISuite) Test_GetMessageByRequestID() {
 	})
 }
 
+func (s *MsgRepoAPISuite) Test_GetServiceMessageByID() {
+	s.Run("message exists", func() {
+		authorID := types.NewUserID()
+		managerID := types.NewUserID()
+		requestID := types.NewRequestID()
+
+		// Create chat and problem.
+		problemID, chatID := s.createProblemWithManagerAndChat(authorID, managerID)
+
+		msgID := types.NewMessageID()
+
+		// Create service message.
+		expectedMsg, err := s.Database.Message(s.Ctx).Create().
+			SetID(msgID).
+			SetChatID(chatID).
+			SetProblemID(problemID).
+			SetBody(msgBody).
+			SetIsBlocked(false).
+			SetIsService(true).
+			SetInitialRequestID(requestID).
+			Save(s.Ctx)
+		s.Require().NoError(err)
+
+		// Get it.
+		actualMsg, err := s.repo.GetServiceMessageByID(s.Ctx, msgID)
+		s.Require().NoError(err)
+		s.Require().NotNil(actualMsg)
+		s.Equal(expectedMsg.ID, actualMsg.ID)
+		s.Equal(expectedMsg.ChatID, actualMsg.ChatID)
+		s.Equal(authorID, actualMsg.ClientID)
+		s.Equal(managerID, actualMsg.ManagerID)
+		s.Equal(expectedMsg.Body, actualMsg.Body)
+		s.Equal(expectedMsg.CreatedAt.Unix(), actualMsg.CreatedAt.Unix())
+		s.Equal(expectedMsg.IsVisibleForClient, actualMsg.IsVisibleForClient)
+		s.Equal(expectedMsg.IsVisibleForManager, actualMsg.IsVisibleForManager)
+		s.Equal(expectedMsg.IsBlocked, actualMsg.IsBlocked)
+	})
+
+	s.Run("message does not exist", func() {
+		msg, err := s.repo.GetMessageByID(s.Ctx, types.NewMessageID())
+		s.Require().Error(err)
+		s.Require().Nil(msg)
+	})
+}
+
 func (s *MsgRepoAPISuite) Test_CreateClientVisible() {
 	authorID := types.NewUserID()
 
@@ -161,7 +252,44 @@ func (s *MsgRepoAPISuite) Test_CreateClientVisible() {
 	}
 }
 
-func (s *MsgRepoAPISuite) Test_CreateClientVisible_DuplicationError() {
+func (s *MsgRepoAPISuite) Test_CreateFullVisible() {
+	authorID := types.NewUserID()
+
+	// Create chat and problem.
+	problemID, chatID := s.createProblemAndChat(authorID)
+	requestID := types.NewRequestID()
+
+	// Check message was created.
+	msg, err := s.repo.CreateFullVisible(s.Ctx, requestID, problemID, chatID, authorID, msgBody)
+	s.Require().NoError(err)
+	s.Require().NotNil(msg)
+	s.NotEmpty(msg.ID)
+	s.Equal(chatID, msg.ChatID)
+	s.Equal(authorID, msg.AuthorID)
+	s.Equal(msgBody, msg.Body)
+	s.True(msg.IsVisibleForClient)
+	s.True(msg.IsVisibleForManager)
+	s.False(msg.IsBlocked)
+	s.False(msg.IsService)
+	s.Equal(requestID, msg.RequestID)
+
+	{
+		dbMsg, err := s.Database.Message(s.Ctx).Get(s.Ctx, msg.ID)
+		s.Require().NoError(err)
+		s.Require().NotNil(dbMsg)
+
+		s.Run("message is visible for client and for manager both", func() {
+			s.True(dbMsg.IsVisibleForClient)
+			s.True(dbMsg.IsVisibleForManager)
+		})
+
+		s.Run("initial_request_id is set correctly", func() {
+			s.Equal(requestID, dbMsg.InitialRequestID)
+		})
+	}
+}
+
+func (s *MsgRepoAPISuite) Test_CreateServiceMsg() {
 	authorID := types.NewUserID()
 
 	// Create chat and problem.
@@ -169,12 +297,37 @@ func (s *MsgRepoAPISuite) Test_CreateClientVisible_DuplicationError() {
 	initialRequestID := types.NewRequestID()
 
 	// Check message was created.
-	_, err := s.repo.CreateClientVisible(s.Ctx, initialRequestID, problemID, chatID, authorID, msgBody)
+	msg, err := s.repo.CreateServiceMsg(s.Ctx, initialRequestID, problemID, chatID, msgBody, true, false)
 	s.Require().NoError(err)
+	s.Require().NotNil(msg)
+	s.NotEmpty(msg.ID)
+	s.Equal(chatID, msg.ChatID)
+	s.Equal(types.UserIDNil, msg.AuthorID)
+	s.Equal(msgBody, msg.Body)
+	s.False(msg.CreatedAt.IsZero())
+	s.True(msg.IsVisibleForClient)
+	s.False(msg.IsVisibleForManager)
+	s.False(msg.IsBlocked)
+	s.True(msg.IsService)
 
-	// Retry message creation.
-	_, err = s.repo.CreateClientVisible(s.Ctx, initialRequestID, problemID, chatID, authorID, msgBody)
-	s.Require().Error(err)
+	{
+		dbMsg, err := s.Database.Message(s.Ctx).Get(s.Ctx, msg.ID)
+		s.Require().NoError(err)
+		s.Require().NotNil(dbMsg)
+
+		s.Run("message is visible for client and invisible for manager", func() {
+			s.True(dbMsg.IsVisibleForClient)
+			s.False(dbMsg.IsVisibleForManager)
+		})
+
+		s.Run("message is service", func() {
+			s.True(dbMsg.IsService)
+		})
+
+		s.Run("initial_request_id is set correctly", func() {
+			s.Equal(initialRequestID, dbMsg.InitialRequestID)
+		})
+	}
 }
 
 func (s *MsgRepoAPISuite) createProblemAndChat(clientID types.UserID) (types.ProblemID, types.ChatID) {
@@ -184,6 +337,21 @@ func (s *MsgRepoAPISuite) createProblemAndChat(clientID types.UserID) (types.Pro
 	s.Require().NoError(err)
 
 	problem, err := s.Database.Problem(s.Ctx).Create().SetChatID(chat.ID).Save(s.Ctx)
+	s.Require().NoError(err)
+
+	return problem.ID, chat.ID
+}
+
+func (s *MsgRepoAPISuite) createProblemWithManagerAndChat(
+	clientID types.UserID,
+	managerID types.UserID,
+) (types.ProblemID, types.ChatID) {
+	s.T().Helper()
+
+	chat, err := s.Database.Chat(s.Ctx).Create().SetClientID(clientID).Save(s.Ctx)
+	s.Require().NoError(err)
+
+	problem, err := s.Database.Problem(s.Ctx).Create().SetChatID(chat.ID).SetManagerID(managerID).Save(s.Ctx)
 	s.Require().NoError(err)
 
 	return problem.ID, chat.ID

@@ -32,6 +32,73 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/FreeHandsResponse"
+  /getChats:
+    post:
+      description: Get the list of chats with open problems.
+      parameters:
+        - $ref: "#/components/parameters/XRequestIDHeader"
+      responses:
+        '200':
+          description: Chats list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetChatsResponse"
+  /getChatHistory:
+    post:
+      description: Get manager chat history.
+      parameters:
+        - $ref: "#/components/parameters/XRequestIDHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GetChatHistoryRequest"
+      responses:
+        '200':
+          description: Messages list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetChatHistoryResponse"
+  /sendMessage:
+    post:
+      description: Send new message to the chat.
+      parameters:
+        - $ref: "#/components/parameters/XRequestIDHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageRequest"
+      responses:
+        '200':
+          description: Message created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SendMessageResponse"
+  /closeChat:
+    post:
+      description: Send new message to the chat.
+      parameters:
+        - $ref: "#/components/parameters/XRequestIDHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CloseChatRequest"
+      responses:
+        '200':
+          description: Message created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CloseChatResponse"
+
 security:
   - bearerAuth: [ ]
 
@@ -57,6 +124,16 @@ components:
   schemas:
     # Common.
 
+    ChatId:
+      required: [ chatId ]
+      properties:
+        chatId:
+          type: string
+          format: uuid
+          x-go-type: types.ChatID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+
     Error:
       required: [ message, code ]
       properties:
@@ -72,8 +149,10 @@ components:
       description: contains HTTP error codes and specific business logic error codes (the last must be >= 1000).
       enum:
         - 5000
+        - 5001
       x-enum-varnames:
         - ErrorCodeManagerOverloaded
+        - ErrorCodeNoActiveProblemInChat
       minimum: 400
 
     # /getFreeHandsBtnAvailability
@@ -99,4 +178,145 @@ components:
           $ref: "#/components/schemas/Error"
 
     FreeHands:
+      required: [ ]
+
+    # /getChats
+    GetChatsResponse:
+      properties:
+        data:
+          $ref: "#/components/schemas/ChatList"
+        error:
+          $ref: "#/components/schemas/Error"
+
+    ChatList:
+      required: [ chats ]
+      properties:
+        chats:
+          type: array
+          items: { $ref: "#/components/schemas/Chat" }
+
+    Chat:
+      allOf:
+        - $ref: "#/components/schemas/ChatId"
+        - type: object
+          required: [ clientId ]
+          properties:
+            clientId:
+              type: string
+              format: uuid
+              x-go-type: types.UserID
+              x-go-type-import:
+                path: "github.com/lapitskyss/chat-service/internal/types"
+
+    # /getChatHistory
+    GetChatHistoryRequest:
+      required: [ chatId ]
+      properties:
+        chatId:
+          type: string
+          format: uuid
+          x-go-type: types.ChatID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+        pageSize:
+          type: integer
+          minimum: 10
+          maximum: 100
+        cursor:
+          type: string
+
+    GetChatHistoryResponse:
+      properties:
+        data:
+          $ref: "#/components/schemas/MessagesPage"
+        error:
+          $ref: "#/components/schemas/Error"
+
+    MessagesPage:
+      required: [ messages, next ]
+      properties:
+        messages:
+          type: array
+          items: { $ref: "#/components/schemas/Message" }
+        next:
+          type: string
+
+    Message:
+      required: [ id, authorId, body, createdAt ]
+      properties:
+        id:
+          type: string
+          format: uuid
+          x-go-type: types.MessageID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+        authorId:
+          type: string
+          format: uuid
+          x-go-type: types.UserID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+        body:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    # /sendMessage
+    SendMessageRequest:
+      allOf:
+        - $ref: "#/components/schemas/ChatId"
+        - type: object
+          required: [ messageBody ]
+          properties:
+            messageBody:
+              type: string
+              minLength: 1
+              maxLength: 3000
+
+    SendMessageResponse:
+      properties:
+        data:
+          $ref: "#/components/schemas/MessageWithoutBody"
+        error:
+          $ref: "#/components/schemas/Error"
+
+    MessageWithoutBody:
+      required: [ id, authorId, createdAt ]
+      properties:
+        id:
+          type: string
+          format: uuid
+          x-go-type: types.MessageID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+        authorId:
+          type: string
+          format: uuid
+          x-go-type: types.UserID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+        createdAt:
+          type: string
+          format: date-time
+
+    # /closeChat
+    CloseChatRequest:
+      required: [ chatId ]
+      properties:
+        chatId:
+          type: string
+          format: uuid
+          x-go-type: types.ChatID
+          x-go-type-import:
+            path: "github.com/lapitskyss/chat-service/internal/types"
+
+    CloseChatResponse:
+      properties:
+        data:
+          $ref: "#/components/schemas/CloseChat"
+        error:
+          $ref: "#/components/schemas/Error"
+
+    CloseChat:
       required: [ ]

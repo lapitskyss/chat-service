@@ -21,13 +21,12 @@ type Options struct {
 	logger   *zap.Logger  `option:"mandatory" validate:"required"`
 	addr     string       `option:"mandatory" validate:"required,hostname_port"`
 	handler  http.Handler `option:"mandatory" validate:"-"`
-	cancelFn func()       `option:"mandatory" validate:"-"`
+	shutdown func()       `option:"mandatory" validate:"-"`
 }
 
 type Server struct {
-	lg       *zap.Logger
-	srv      *http.Server
-	cancelFn func()
+	lg  *zap.Logger
+	srv *http.Server
 }
 
 func New(opts Options) (*Server, error) {
@@ -35,14 +34,18 @@ func New(opts Options) (*Server, error) {
 		return nil, fmt.Errorf("validate options: %v", err)
 	}
 
+	srv := &http.Server{
+		Addr:              opts.addr,
+		Handler:           opts.handler,
+		ReadHeaderTimeout: readHeaderTimeout,
+	}
+
+	// Register custom shutdown function to directly stop long-living connections like websockets.
+	srv.RegisterOnShutdown(opts.shutdown)
+
 	return &Server{
-		lg: opts.logger,
-		srv: &http.Server{
-			Addr:              opts.addr,
-			Handler:           opts.handler,
-			ReadHeaderTimeout: readHeaderTimeout,
-		},
-		cancelFn: opts.cancelFn,
+		lg:  opts.logger,
+		srv: srv,
 	}, nil
 }
 
@@ -51,8 +54,6 @@ func (s *Server) Run(ctx context.Context) error {
 
 	eg.Go(func() error {
 		<-ctx.Done()
-
-		s.cancelFn()
 
 		ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 		defer cancel()
