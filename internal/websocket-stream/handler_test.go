@@ -3,6 +3,7 @@ package websocketstream_test
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -58,6 +59,7 @@ func TestHTTPHandler(t *testing.T) {
 		eventAdapter{},
 		websocketstream.JSONEventWriter{},
 		websocketstream.NewUpgrader([]string{origin}, secWsProtocol),
+		msgReadHandler{},
 		shutdownCh,
 		websocketstream.WithPingPeriod(pingInterval),
 	))
@@ -159,4 +161,10 @@ type eventAdapter struct{}
 
 func (eventAdapter) Adapt(event eventstream.Event) (any, error) {
 	return event, nil
+}
+
+type msgReadHandler struct{}
+
+func (msgReadHandler) Handle(_ context.Context, _ types.UserID, _ io.Reader) error {
+	return nil
 }

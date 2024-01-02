@@ -10,6 +10,7 @@ import (
 	"github.com/lapitskyss/chat-service/internal/store/chat"
 	"github.com/lapitskyss/chat-service/internal/store/problem"
 	"github.com/lapitskyss/chat-service/internal/types"
+	"github.com/lapitskyss/chat-service/pkg/pointer"
 )
 
 var ErrProblemNotFound = errors.New("problem not found")
@@ -41,6 +42,40 @@ func (r *Repo) CreateIfNotExists(ctx context.Context, chatID types.ChatID) (type
 		return types.ProblemIDNil, fmt.Errorf("get problem: %v", err)
 	}
 	return problemID, nil
+}
+
+func (r *Repo) GetChatOpenProblem(ctx context.Context, chatID types.ChatID) (*Problem, error) {
+	p, err := r.db.Problem(ctx).
+		Query().
+		Where(
+			problem.ChatID(chatID),
+			problem.ResolvedAtIsNil(),
+		).
+		First(ctx)
+	if err != nil {
+		if store.IsNotFound(err) {
+			return nil, ErrProblemNotFound
+		}
+		return nil, fmt.Errorf("get chat open problem: %v", err)
+	}
+	return pointer.Ptr(adaptProblem(p)), nil
+}
+
+func (r *Repo) GetClientOpenProblem(ctx context.Context, clientID types.UserID) (*Problem, error) {
+	p, err := r.db.Problem(ctx).
+		Query().
+		Where(
+			problem.HasChatWith(chat.ClientID(clientID)),
+			problem.ResolvedAtIsNil(),
+		).
+		First(ctx)
+	if err != nil {
+		if store.IsNotFound(err) {
+			return nil, ErrProblemNotFound
+		}
+		return nil, fmt.Errorf("get chat open problem: %v", err)
+	}
+	return pointer.Ptr(adaptProblem(p)), nil
 }
 
 func (r *Repo) GetManagerOpenProblemsCount(ctx context.Context, managerID types.UserID) (int, error) {

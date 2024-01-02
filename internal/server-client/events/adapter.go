@@ -60,6 +60,19 @@ func (Adapter) Adapt(ev eventstream.Event) (any, error) {
 		}
 
 		return event, nil
+	case *eventstream.TypingEvent:
+		event := Event{}
+
+		err := event.FromTypingEvent(TypingEvent{
+			EventId:   e.EventID,
+			ClientId:  e.ClientID,
+			RequestId: e.RequestID,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("from typing event: %v", err)
+		}
+
+		return event, nil
 	}
 	return nil, ErrUnexpectedEventType
 }

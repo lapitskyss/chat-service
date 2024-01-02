@@ -15,7 +15,10 @@ import (
 
 var ErrRequestIDNotFound = errors.New("problem request id not found")
 
-func (r *Repo) AllAvailableForManager(ctx context.Context) ([]Problem, error) {
+func (r *Repo) AllAvailableForManager(ctx context.Context, limit int) ([]Problem, error) {
+	if limit <= 0 {
+		return nil, errors.New("invalid limit")
+	}
 	problems, err := r.db.Problem(ctx).
 		Query().
 		Where(
@@ -23,6 +26,7 @@ func (r *Repo) AllAvailableForManager(ctx context.Context) ([]Problem, error) {
 			problem.HasMessagesWith(message.IsVisibleForManager(true)),
 		).
 		Order(problem.ByCreatedAt(sql.OrderAsc())).
+		Limit(limit).
 		All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get available problems for manager: %v", err)

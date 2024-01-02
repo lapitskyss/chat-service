@@ -6,14 +6,16 @@ import (
 )
 
 type Problem struct {
-	ID     types.ProblemID
-	ChatID types.ChatID
+	ID        types.ProblemID
+	ChatID    types.ChatID
+	ManagerID types.UserID
 }
 
 func adaptProblem(p *store.Problem) Problem {
 	return Problem{
-		p.ID,
-		p.ChatID,
+		ID:        p.ID,
+		ChatID:    p.ChatID,
+		ManagerID: p.ManagerID,
 	}
 }
 

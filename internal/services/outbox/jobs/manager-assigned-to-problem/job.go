@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"golang.org/x/sync/errgroup"
+
 	messagesrepo "github.com/lapitskyss/chat-service/internal/repositories/messages"
 	eventstream "github.com/lapitskyss/chat-service/internal/services/event-stream"
 	"github.com/lapitskyss/chat-service/internal/services/outbox"
@@ -63,29 +65,41 @@ func (j *Job) Handle(ctx context.Context, payload string) error {
 		return fmt.Errorf("manager load svc, can manager take problem: %v", err)
 	}
 
-	err = j.eventStream.Publish(ctx, msg.ManagerID, eventstream.NewNewChatEvent(
-		types.NewEventID(),
-		msg.ChatID,
-		msg.ClientID,
-		msg.RequestID,
-		canTakeMoreProblems,
-	))
-	if err != nil {
-		return fmt.Errorf("event stream, publish new chat event: %v", err)
-	}
+	eg, ctx := errgroup.WithContext(ctx)
 
-	err = j.eventStream.Publish(ctx, msg.ClientID, eventstream.NewNewMessageEvent(
-		types.NewEventID(),
-		msg.RequestID,
-		msg.ChatID,
-		msg.ID,
-		types.UserIDNil,
-		msg.CreatedAt,
-		msg.Body,
-		true,
-	))
-	if err != nil {
-		return fmt.Errorf("event stream, publish new message event: %v", err)
+	eg.Go(func() error {
+		err = j.eventStream.Publish(ctx, msg.ManagerID, eventstream.NewNewChatEvent(
+			types.NewEventID(),
+			msg.ChatID,
+			msg.ClientID,
+			msg.RequestID,
+			canTakeMoreProblems,
+		))
+		if err != nil {
+			return fmt.Errorf("event stream, publish new chat event: %v", err)
+		}
+		return nil
+	})
+
+	eg.Go(func() error {
+		err = j.eventStream.Publish(ctx, msg.ClientID, eventstream.NewNewMessageEvent(
+			types.NewEventID(),
+			msg.RequestID,
+			msg.ChatID,
+			msg.ID,
+			types.UserIDNil,
+			msg.CreatedAt,
+			msg.Body,
+			true,
+		))
+		if err != nil {
+			return fmt.Errorf("event stream, publish new message event: %v", err)
+		}
+		return nil
+	})
+
+	if err = eg.Wait(); err != nil {
+		return fmt.Errorf("errgroup wait: %v", err)
 	}
 
 	return nil

@@ -89,6 +89,60 @@ func (s *ProblemsRepoSuite) Test_CreateIfNotExists() {
 	})
 }
 
+func (s *ProblemsRepoSuite) Test_GetChatOpenProblem() {
+	s.Run("problem exists", func() {
+		clientID := types.NewUserID()
+		managerID := types.NewUserID()
+
+		// Create chat.
+		chat, err := s.Database.Chat(s.Ctx).Create().SetClientID(clientID).Save(s.Ctx)
+		s.Require().NoError(err)
+
+		// Create problem.
+		problem, err := s.Database.Problem(s.Ctx).Create().SetChatID(chat.ID).SetManagerID(managerID).Save(s.Ctx)
+		s.Require().NoError(err)
+
+		openProblem, err := s.repo.GetChatOpenProblem(s.Ctx, chat.ID)
+		s.Require().NoError(err)
+		s.Equal(openProblem.ID, problem.ID)
+		s.Equal(openProblem.ChatID, chat.ID)
+		s.Equal(openProblem.ManagerID, managerID)
+	})
+
+	s.Run("problem does not exist", func() {
+		problem, err := s.repo.GetChatOpenProblem(s.Ctx, types.NewChatID())
+		s.Require().Error(err)
+		s.Require().Nil(problem)
+	})
+}
+
+func (s *ProblemsRepoSuite) Test_GetClientOpenProblem() {
+	s.Run("problem exists", func() {
+		clientID := types.NewUserID()
+		managerID := types.NewUserID()
+
+		// Create chat.
+		chat, err := s.Database.Chat(s.Ctx).Create().SetClientID(clientID).Save(s.Ctx)
+		s.Require().NoError(err)
+
+		// Create problem.
+		problem, err := s.Database.Problem(s.Ctx).Create().SetChatID(chat.ID).SetManagerID(managerID).Save(s.Ctx)
+		s.Require().NoError(err)
+
+		openProblem, err := s.repo.GetClientOpenProblem(s.Ctx, clientID)
+		s.Require().NoError(err)
+		s.Equal(openProblem.ID, problem.ID)
+		s.Equal(openProblem.ChatID, chat.ID)
+		s.Equal(openProblem.ManagerID, managerID)
+	})
+
+	s.Run("problem does not exist", func() {
+		problem, err := s.repo.GetClientOpenProblem(s.Ctx, types.NewUserID())
+		s.Require().Error(err)
+		s.Require().Nil(problem)
+	})
+}
+
 func (s *ProblemsRepoSuite) Test_GetManagerOpenProblemsCount() {
 	s.Run("manager has no open problems", func() {
 		managerID := types.NewUserID()

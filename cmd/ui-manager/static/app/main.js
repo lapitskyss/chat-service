@@ -9,6 +9,7 @@ class App {
     static apiClient;
     static currentChatHistoryCursor;
     static currentChatID;
+    static currentClientID;
 
     static openChats = $('#open-chats');
     static problemSelector = '.problem';
@@ -19,6 +20,8 @@ class App {
     static problemResolvedButton = $('#problem-resolved-btn');
 
     static programScroll = false;
+
+    static sock;
 
     static Run() {
         const keycloak = new Keycloak({
@@ -49,7 +52,7 @@ class App {
 
                 this.apiClient = new APIClient(this.managerToken);
 
-                initWsStream(this.managerToken);
+                this.sock = initWsStream(this.managerToken);
                 App.GetOpenProblems();
                 App.GetReadyToProblemsAv();
                 App.InitListeners();
@@ -93,6 +96,7 @@ class App {
         App.GetChatHistoryOnScroll();
         App.SendMessageOnBtnClick();
         App.ResolveProblemOnBtnClick();
+        App.TypingMessage();
     }
 
     static ReadyToProblemsOnBtnClick() {
@@ -113,6 +117,7 @@ class App {
         const app = this;
         $(document.body).on('click', App.problemSelector, function () {
             const chatId = $(this).data('chat-id');
+            const clientId = $(this).data('client-id');
             if (App.currentChatID === chatId) {
                 return
             }
@@ -121,6 +126,7 @@ class App {
             $(`*[data-chat-id="${App.currentChatID}"]`).removeClass('selected');
             $(`*[data-chat-id="${chatId}"]`).addClass('selected');
             App.currentChatID = chatId;
+            App.currentClientID = clientId;
 
             app.chatArea.empty();
             app.currentChatHistoryCursor = '';
@@ -225,6 +231,34 @@ class App {
                 .catch((err) => {
                     alert('Resolve problem error: ' + err);
                 });
+        });
+    }
+
+    static TypingMessage() {
+        const app = this;
+
+        let canPublish = true;
+        const throttleTime = 500; // 0.5 seconds
+
+        this.msgInput.on('keyup', function () {
+            if (!App.currentChatID) {
+                return;
+            }
+
+            if (canPublish) {
+                const chatId = $(this).data('chat-id');
+                let request = {
+                    "eventType": "ManagerTypingEvent",
+                    "chatId": App.currentChatID,
+                    "requestId": uuidV4(),
+                }
+                app.sock.send(JSON.stringify(request))
+
+                canPublish = false;
+                setTimeout(function () {
+                    canPublish = true;
+                }, throttleTime);
+            }
         });
     }
 

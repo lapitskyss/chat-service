@@ -26,6 +26,13 @@ type Event struct {
 	union json.RawMessage
 }
 
+// ManagerTypingEvent defines model for ManagerTypingEvent.
+type ManagerTypingEvent struct {
+	ChatId    types.ChatID    `json:"chatId"`
+	EventType string          `json:"eventType"`
+	RequestId types.RequestID `json:"requestId"`
+}
+
 // NewChatEvent defines model for NewChatEvent.
 type NewChatEvent struct {
 	CanTakeMoreProblems bool            `json:"canTakeMoreProblems"`
@@ -45,6 +52,19 @@ type NewMessageEvent struct {
 	EventId   types.EventID   `json:"eventId"`
 	EventType string          `json:"eventType"`
 	MessageId types.MessageID `json:"messageId"`
+	RequestId types.RequestID `json:"requestId"`
+}
+
+// ReadEvent defines model for ReadEvent.
+type ReadEvent struct {
+	union json.RawMessage
+}
+
+// TypingEvent defines model for TypingEvent.
+type TypingEvent struct {
+	ClientId  types.UserID    `json:"clientId"`
+	EventId   types.EventID   `json:"eventId"`
+	EventType string          `json:"eventType"`
 	RequestId types.RequestID `json:"requestId"`
 }
 
@@ -132,6 +152,34 @@ func (t *Event) MergeChatClosedEvent(v ChatClosedEvent) error {
 	return err
 }
 
+// AsTypingEvent returns the union data inside the Event as a TypingEvent
+func (t Event) AsTypingEvent() (TypingEvent, error) {
+	var body TypingEvent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromTypingEvent overwrites any union data inside the Event as the provided TypingEvent
+func (t *Event) FromTypingEvent(v TypingEvent) error {
+	v.EventType = "TypingEvent"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeTypingEvent performs a merge with any union data inside the Event, using the provided TypingEvent
+func (t *Event) MergeTypingEvent(v TypingEvent) error {
+	v.EventType = "TypingEvent"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JsonMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
 func (t Event) Discriminator() (string, error) {
 	var discriminator struct {
 		Discriminator string `json:"eventType"`
@@ -152,6 +200,8 @@ func (t Event) ValueByDiscriminator() (interface{}, error) {
 		return t.AsNewChatEvent()
 	case "NewMessageEvent":
 		return t.AsNewMessageEvent()
+	case "TypingEvent":
+		return t.AsTypingEvent()
 	default:
 		return nil, errors.New("unknown discriminator value: " + discriminator)
 	}
@@ -163,6 +213,65 @@ func (t Event) MarshalJSON() ([]byte, error) {
 }
 
 func (t *Event) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsManagerTypingEvent returns the union data inside the ReadEvent as a ManagerTypingEvent
+func (t ReadEvent) AsManagerTypingEvent() (ManagerTypingEvent, error) {
+	var body ManagerTypingEvent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromManagerTypingEvent overwrites any union data inside the ReadEvent as the provided ManagerTypingEvent
+func (t *ReadEvent) FromManagerTypingEvent(v ManagerTypingEvent) error {
+	v.EventType = "ManagerTypingEvent"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeManagerTypingEvent performs a merge with any union data inside the ReadEvent, using the provided ManagerTypingEvent
+func (t *ReadEvent) MergeManagerTypingEvent(v ManagerTypingEvent) error {
+	v.EventType = "ManagerTypingEvent"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JsonMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ReadEvent) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"eventType"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t ReadEvent) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "ManagerTypingEvent":
+		return t.AsManagerTypingEvent()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t ReadEvent) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ReadEvent) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }

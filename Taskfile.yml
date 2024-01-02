@@ -20,6 +20,7 @@ vars:
     github.com/deepmap/oapi-codegen/cmd/oapi-codegen@v1.16.2
     go.uber.org/mock/mockgen@v0.3.0
     github.com/onsi/ginkgo/v2/ginkgo@v2.13.0
+    github.com/google/wire/cmd/wire@0.5.0
 
   TYPES: |
     ChatID
@@ -55,9 +56,17 @@ vars:
   CLIENT_EVENTS_DST: ./internal/server-client/events/events.gen.go
   CLIENT_EVENTS_PKG: clientevents
 
+  WS_CLIENT_EVENTS_SRC: ./api/client.events.swagger.yml
+  WS_CLIENT_EVENTS_DST: ./internal/websocket-stream/client-handler/events/events.gen.go
+  WS_CLIENT_EVENTS_PKG: clientevents
+
   MANAGER_EVENTS_SRC: ./api/manager.events.swagger.yml
   MANAGER_EVENTS_DST: ./internal/server-manager/events/events.gen.go
   MANAGER_EVENTS_PKG: managerevents
+
+  WS_MANAGER_EVENTS_SRC: ./api/manager.events.swagger.yml
+  WS_MANAGER_EVENTS_DST: ./internal/websocket-stream/manager-handler/events/events.gen.go
+  WS_MANAGER_EVENTS_PKG: managerevents
 
   E2E_CLIENT_V1_DST: ./tests/e2e/api/client/v1/client.gen.go
   E2E_CLIENT_V1_PKG: apiclientv1
@@ -223,6 +232,11 @@ tasks:
       - echo "Exported in ./deploy/local/bank-realm.json"
       - "{{.DOCKER_COMPOSE_CMD}} cp keycloak:/tmp/realm.json ./deploy/local/bank-realm.json"
 
+  gen:wire:
+    cmds:
+      - echo "Generate wire..."
+      - go generate ./cmd/chat-service/starter/wire.go
+
   gen:types:
     cmds:
       - echo "Generate types..."
@@ -236,8 +250,10 @@ tasks:
       - oapi-codegen --old-config-style -generate types,server,spec -package {{.MANAGER_V1_PKG}} {{.MANAGER_V1_SRC}} > {{.MANAGER_V1_DST}}
       - echo "Generate client events..."
       - oapi-codegen --old-config-style -generate skip-prune,types,spec -package {{.CLIENT_EVENTS_PKG}} {{.CLIENT_EVENTS_SRC}} > {{.CLIENT_EVENTS_DST}}
+      - oapi-codegen --old-config-style -generate skip-prune,types,spec -package {{.WS_CLIENT_EVENTS_PKG}} {{.WS_CLIENT_EVENTS_SRC}} > {{.WS_CLIENT_EVENTS_DST}}
       - echo "Generate manager events..."
       - oapi-codegen --old-config-style -generate skip-prune,types,spec -package {{.MANAGER_EVENTS_PKG}} {{.MANAGER_EVENTS_SRC}} > {{.MANAGER_EVENTS_DST}}
+      - oapi-codegen --old-config-style -generate skip-prune,types,spec -package {{.WS_MANAGER_EVENTS_PKG}} {{.WS_MANAGER_EVENTS_SRC}} > {{.WS_MANAGER_EVENTS_DST}}
       - task: tidy
 
   gen:e2e:

@@ -1,3 +1,6 @@
+const clearTypingInterval = 900; //0.9 seconds
+let clearTypingTimerId;
+
 const eventHandlers = {
     'NewMessageEvent': (event) => {
         if ($(`*[data-message-id="${event.messageId}"]`).length > 0) {
@@ -19,7 +22,16 @@ const eventHandlers = {
         }
         msg.find('.body').remove();
         msg.find('.body-with-checks').prepend(msgWasBlockedAlert);
-    }
+    },
+
+    'TypingEvent': (event) => {
+        $('#manager-is-typing').html(event.clientId + ' is typing...');
+
+        clearTimeout(clearTypingTimerId);
+        clearTypingTimerId = setTimeout(function () {
+            $('#manager-is-typing').html('');
+        }, clearTypingInterval);
+    },
 };
 
 function initWsStream(token) {
@@ -68,4 +80,6 @@ function initWsStream(token) {
 
         eventHandlers[eventType](payload);
     };
+
+    return sock
 }

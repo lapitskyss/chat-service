@@ -75,22 +75,28 @@ func (s *ChatsRepoSuite) Test_GetChatByID() {
 	s.Run("chat does not exist", func() {
 		msg, err := s.repo.GetChatByID(s.Ctx, types.NewChatID())
 		s.Require().Error(err)
+		s.Require().ErrorIs(err, chatsrepo.ErrChatNotFound)
 		s.Require().Nil(msg)
 	})
 }
 
 func (s *ChatsRepoSuite) Test_AllWithOpenProblemsForManager() {
 	s.Run("has chats with open problems", func() {
-		clientID := types.NewUserID()
+		clientID1 := types.NewUserID()
+		clientID2 := types.NewUserID()
 		managerID := types.NewUserID()
 
-		chatID := s.createChatWithProblemAssignedTo(clientID, managerID)
+		chatID1 := s.createChatWithProblemAssignedTo(clientID1, managerID)
+		time.Sleep(time.Millisecond)
+		chatID2 := s.createChatWithProblemAssignedTo(clientID2, managerID)
 
 		chats, err := s.repo.AllWithOpenProblemsForManager(s.Ctx, managerID)
 		s.Require().NoError(err)
-		s.Len(chats, 1)
-		s.Equal(chatID, chats[0].ID)
-		s.Equal(clientID, chats[0].ClientID)
+		s.Len(chats, 2)
+		s.Equal(chatID1, chats[0].ID)
+		s.Equal(clientID1, chats[0].ClientID)
+		s.Equal(chatID2, chats[1].ID)
+		s.Equal(clientID2, chats[1].ClientID)
 	})
 
 	s.Run("has chats with closed problems", func() {
